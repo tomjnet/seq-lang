@@ -1,0 +1,12 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "top3Company"
+
+step step1():
+    ask("create a database file company.txt with 5 sample stock transactions")
+
+step step2():
+    ask("for each transaction created give me the total revenue of the company")
+
+step step3():
+    ask("create an image chart showing the 3 companies with the highest revenue")

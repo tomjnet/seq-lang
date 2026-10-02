@@ -1,0 +1,12 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "@NAME@"
+
+step step1():
+    ask("create a database file company.txt with 5 sample stock transactions, one per line as: company,quantity,price")
+
+step step2():
+    ask("for each company in company.txt print its sales total, the sum of quantity times price")
+
+step step3():
+    ask("create an image chart top3.png showing the 3 companies with the highest sales total")

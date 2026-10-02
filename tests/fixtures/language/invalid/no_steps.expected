@@ -1,0 +1,5 @@
+FILE:1:1: error[E0314]: workflow has no steps
+    model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+    ^
+    hint: add a step block: a line `step step1():` followed by an indented `ask("...")`
+seqc: 1 error(s) in FILE

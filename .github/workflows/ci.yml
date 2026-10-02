@@ -1,0 +1,134 @@
+# Continuous integration: builds and tests every push and pull request.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the run in progress.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Deterministic suites only: a scripted model and no network at test time.
+  # Most tests build generated tests against the bundled stand-in; one runs
+  # against the installed Google Test. Live-model evaluation is separate.
+  linux:
+    name: Linux (${{ matrix.preset }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [dev, release, asan]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build python3 curl libgtest-dev
+
+      # The sandbox tests need Landlock and seccomp on the runner's kernel.
+      # This step records what the runner offers, so a failure of the
+      # security suite can be read against it.
+      - name: Show kernel and security modules
+        run: |
+          uname -r
+          cat /sys/kernel/security/lsm || true
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Doctor
+        run: build/${{ matrix.preset }}/bin/seqc doctor || true
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+
+  # The parts of seqc that are portable: scaffolding and validation.
+  windows:
+    name: Windows (dev)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure
+        run: cmake --preset dev
+      - name: Build
+        run: cmake --build --preset dev
+      - name: Test
+        run: ctest --preset dev
+
+  # install.sh, both ways: a source build from this checkout, then a package
+  # laid out like a release and served from a local directory.
+  installer:
+    name: install.sh
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build curl
+
+      - name: Lint
+        run: |
+          bash -n install.sh
+          pipx run --spec shellcheck-py==0.11.0.1 shellcheck --version
+          pipx run --spec shellcheck-py==0.11.0.1 shellcheck install.sh
+
+      - name: Dependency check
+        run: bash install.sh --from-source --check
+
+      - name: Install from this checkout into a temporary prefix
+        run: |
+          prefix="$RUNNER_TEMP/seqc-source"
+          bash install.sh --from-source --source . --prefix "$prefix"
+          "$prefix/bin/seqc" --version
+          test -f "$prefix/lib/seqc/lib/libseqrt.a"
+          test -f "$prefix/lib/seqc/include/seq_runtime.h"
+
+      - name: Install the same files as a release package
+        run: |
+          source_prefix="$RUNNER_TEMP/seqc-source"
+          releases="$RUNNER_TEMP/releases"
+          asset=seqc-linux-x86_64
+          mkdir -p "$releases/download/v0.0.0" "$RUNNER_TEMP/pkg/$asset/share"
+          cp -r "$source_prefix/bin" "$source_prefix/lib" "$RUNNER_TEMP/pkg/$asset/"
+          cp -r "$source_prefix/share/doc" "$RUNNER_TEMP/pkg/$asset/share/"
+          tar -C "$RUNNER_TEMP/pkg" -czf "$releases/download/v0.0.0/$asset.tar.gz" "$asset"
+          (cd "$releases/download/v0.0.0" && sha256sum "$asset.tar.gz" > SHA256SUMS)
+
+          prefix="$RUNNER_TEMP/seqc-binary"
+          SEQ_INSTALL_RELEASES_URL="file://$releases" \
+            bash install.sh --binary --ref v0.0.0 --prefix "$prefix"
+          "$prefix/bin/seqc" --version
+          test -f "$prefix/lib/seqc/lib/libseqrt.a"
+
+          # A package that does not match its checksum must be refused.
+          echo tampered >> "$releases/download/v0.0.0/$asset.tar.gz"
+          if SEQ_INSTALL_RELEASES_URL="file://$releases" \
+            bash install.sh --binary --ref v0.0.0 --prefix "$RUNNER_TEMP/seqc-bad"; then
+            echo "::error::install.sh accepted a package with a wrong checksum"
+            exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/seqc-bad/bin/seqc"
+
+      - name: Uninstall
+        run: |
+          for prefix in "$RUNNER_TEMP/seqc-source" "$RUNNER_TEMP/seqc-binary"; do
+            bash install.sh --uninstall --prefix "$prefix"
+            test ! -e "$prefix/bin/seqc"
+            test ! -e "$prefix/lib/seqc"
+          done

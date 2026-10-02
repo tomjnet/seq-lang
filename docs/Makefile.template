@@ -1,0 +1,63 @@
+# Makefile template for C projects.
+# Copy to the project root as `Makefile`.
+#
+# Builds every *.c file in SRC_DIR into its own executable, BUILD_DIR/<name>.bin.
+# Each source file is a separate program with its own main().
+#
+#   make            build a .bin for every .c file
+#   make clean      remove the generated .bin and .d files
+#
+# Any variable can be overridden on the command line, for example:
+#   make COMPILE_FLAGS="-std=c17 -O0 -g" INCLUDE_FLAGS="-Iinclude -Ithird_party"
+
+# ---------------------------------------------------------------------------
+# Toolchain and layout
+# ---------------------------------------------------------------------------
+
+CC        := gcc
+SRC_DIR   := .
+BUILD_DIR := build
+
+# ---------------------------------------------------------------------------
+# Flags
+# ---------------------------------------------------------------------------
+
+# Header search paths (-I<dir>).
+INCLUDE_FLAGS := -Iinclude
+
+# Language standard, optimization, and warnings.
+COMPILE_FLAGS := -std=c17 -O3 -Wall -Wextra -Wpedantic
+
+# Linker options (-L<dir>, -static) and libraries (-l<name>).
+LINK_FLAGS :=
+LINK_LIBS  := -lm
+
+# ---------------------------------------------------------------------------
+# Sources and targets
+# ---------------------------------------------------------------------------
+
+SRCS := $(wildcard $(SRC_DIR)/*.c)
+BINS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.bin,$(SRCS))
+DEPS := $(BINS:.bin=.d)
+
+# ---------------------------------------------------------------------------
+# Rules
+# ---------------------------------------------------------------------------
+
+.PHONY: all clean
+.DELETE_ON_ERROR:
+
+all: $(BINS)
+
+# -MMD -MP writes a .d file listing the headers each source includes, so
+# editing a header rebuilds the programs that use it.
+$(BUILD_DIR)/%.bin: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	$(CC) $(COMPILE_FLAGS) $(INCLUDE_FLAGS) -MMD -MP -MF $(@:.bin=.d) -MT $@ $< -o $@ $(LINK_FLAGS) $(LINK_LIBS)
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+clean:
+	rm -f $(BINS) $(DEPS)
+
+-include $(DEPS)

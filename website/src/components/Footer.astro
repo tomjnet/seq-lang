@@ -1,0 +1,163 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { DOCS, REPO, SITE, VERSION, href } from '../site';
+
+const columns = [
+  {
+    title: 'Language',
+    links: [
+      { label: 'Why Seq', url: href('why/') },
+      { label: 'Learn', url: href('learn/') },
+      { label: 'Try Seq', url: href('#try') },
+      { label: 'Install', url: href('learn/#install') },
+    ],
+  },
+  {
+    title: 'Reference',
+    links: [
+      { label: 'Language', url: `${DOCS}/language.md` },
+      { label: 'Architecture', url: `${DOCS}/architecture.md` },
+      { label: 'Runtime', url: `${DOCS}/runtime.md` },
+      { label: 'Security', url: `${DOCS}/security.md` },
+    ],
+  },
+  {
+    title: 'Project',
+    links: [
+      { label: 'GitHub', url: REPO },
+      { label: 'Changelog', url: `${REPO}/blob/main/CHANGELOG.md` },
+      { label: 'Decisions', url: `${DOCS}/decisions.md` },
+      { label: 'License', url: `${REPO}/blob/main/LICENSE` },
+    ],
+  },
+];
+---
+
+<footer class="footer on-ink">
+  <div class="wrap">
+    <div class="cta">
+      <p class="display h-1">
+        Plain words in.<br /><span class="tail-text">Native code out.</span>
+      </p>
+      <div class="cta-actions">
+        <a class="btn" href={href('learn/')}>
+          Get started
+          <Icon name="arrow-up-right" />
+        </a>
+        <a class="btn btn-ghost" href={REPO}>
+          <Icon name="github" />
+          View on GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="about">
+        <a href={href()} aria-label="Seq home"><Logo id="footer-logo" class="footer-mark" /></a>
+        <p class="muted">
+          {SITE.title}. Version {VERSION}, for Linux x86_64.
+        </p>
+      </div>
+      {
+        columns.map((column) => (
+          <nav aria-label={column.title}>
+            <h2>{column.title}</h2>
+            <ul>
+              {column.links.map((link) => (
+                <li>
+                  <a href={link.url}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
+    </div>
+
+    <p class="legal">
+      MIT licensed. Model weights, llama.cpp, GCC, and Google Test keep their own licenses.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(72px, 9vw, 120px) 40px;
+    background:
+      radial-gradient(60% 50% at 100% 0%, rgba(14, 109, 255, 0.35), transparent 70%),
+      radial-gradient(40% 40% at 0% 100%, rgba(106, 61, 240, 0.25), transparent 70%), var(--ink);
+  }
+
+  .cta {
+    display: grid;
+    gap: 36px;
+    padding-bottom: clamp(56px, 7vw, 96px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px 24px;
+    padding-block: clamp(48px, 6vw, 72px);
+  }
+  .about {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 18px;
+    align-content: start;
+    max-width: 22rem;
+  }
+  .about :global(.footer-mark) {
+    width: auto;
+    height: 44px;
+  }
+
+  h2 {
+    margin-bottom: 18px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  nav ul {
+    display: grid;
+    gap: 10px;
+  }
+  nav a {
+    color: rgba(255, 255, 255, 0.82);
+    transition: color 0.2s;
+  }
+  nav a:hover {
+    color: var(--cyan);
+  }
+
+  .legal {
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+  }
+
+  @media (min-width: 720px) {
+    .cta {
+      grid-template-columns: 1fr auto;
+      align-items: end;
+    }
+    .grid {
+      grid-template-columns: 1.6fr repeat(3, 1fr);
+    }
+    .about {
+      grid-column: auto;
+    }
+  }
+</style>

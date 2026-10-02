@@ -1,0 +1,12 @@
+# Header declarations may come in any order.
+name = "notes_demo-1"
+backend.C()   # the only backend in v0.1
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct/tree/main")
+
+step greet():
+    # Escapes: quote, backslash, newline, tab.
+    ask("print \"hello\" and a backslash \\ then\na second line\twith a tab")
+    ask("a # inside a string is not a comment; café and 日本語 are fine")
+
+step finish():
+    ask("print done")

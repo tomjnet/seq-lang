@@ -1,0 +1,561 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Ticker from '../components/Ticker.astro';
+import Playground from '../components/Playground.astro';
+import Command from '../components/Command.astro';
+import Icon from '../components/Icon.astro';
+import sparrow from '../assets/sparrow.png';
+import { DOCS, INSTALL_URL, REPO, VERSION, href } from '../site';
+
+const reasons = [
+  {
+    title: 'The request is the source',
+    text: 'A Seq file names a model, a backend, and ordered steps of plain-language requests. There are no expressions, branches, or loops to learn.',
+  },
+  {
+    title: 'The model works at compile time',
+    text: '<code>ask()</code> is a compile-time directive. What you run is a native executable that never contacts a model.',
+  },
+  {
+    title: 'Sandboxed by the kernel',
+    text: 'Compilers and generated code run under Landlock and seccomp: no network, and no files beyond the ones they were granted.',
+  },
+  {
+    title: 'Every build explains itself',
+    text: 'The generated C, its assembly, the executable, the tests, and a record of every run are kept beside your outputs.',
+  },
+];
+
+const stages = [
+  { title: 'Parse and validate', text: 'Every error is reported with its line and column, before any model access.' },
+  { title: 'Reuse or plan', text: 'An accepted build for the same source, inputs, model, and toolchain is reused. Otherwise the model writes a plan.' },
+  { title: 'Generate C', text: 'The model writes one function per step. seqc composes the program around them.' },
+  { title: 'Compile', text: 'Policy check, <code>gcc -O3 -S</code>, link. Errors go back for repair, at most twice.' },
+  { title: 'Test', text: 'The model writes Google Test cases, built and run in the sandbox.' },
+  { title: 'Run', text: 'The executable runs in the sandbox, in a staging directory of its own.' },
+  { title: 'Publish', text: 'Declared outputs are validated and published to <code>output/</code>.' },
+];
+
+const docs = [
+  { title: 'Language', text: 'Syntax, limits, diagnostic codes, exit statuses.', url: `${DOCS}/language.md` },
+  { title: 'Architecture', text: 'Pipeline, model protocol, build cache, manifests, settings.', url: `${DOCS}/architecture.md` },
+  { title: 'Runtime', text: 'The contract between seqc and generated code, and the runtime API.', url: `${DOCS}/runtime.md` },
+  { title: 'Security', text: 'The sandbox, what it denies, where it was tested, known limits.', url: `${DOCS}/security.md` },
+  { title: 'Decisions', text: 'What was decided, what was measured, and what is still open.', url: `${DOCS}/decisions.md` },
+];
+---
+
+<Base>
+  <Hero />
+  <Ticker words={['Ask', 'Compile', 'Run', 'Plain words in', 'Native code out']} />
+
+  <!-- Try Seq -->
+  <section class="section on-paper" id="try">
+    <div class="wrap try">
+      <div class="try-intro" data-reveal>
+        <p class="eyebrow">Playground</p>
+        <h2 class="display h-1">Try <span class="tail-text">Seq</span></h2>
+        <p class="lede muted">
+          Pick a workflow and press Run. The console shows what <code>seqc</code> prints as it takes plain requests to
+          published files.
+        </p>
+        <ul class="try-notes">
+          <li>Run it twice. The second run reuses the accepted build: no inference, no compilation.</li>
+          <li>Pick the mistake. It is caught with its line and column before a model is ever started.</li>
+        </ul>
+        <p class="fineprint">
+          The playground replays example sessions in seqc's console format. Compiling for real needs GCC and a local
+          model, so it happens on your machine, not in the browser.
+        </p>
+        <a class="btn btn-ink" href={href('learn/')}>
+          Take the tour
+          <Icon name="arrow-up-right" />
+        </a>
+      </div>
+      <div data-reveal style="--i:1">
+        <Playground />
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Seq -->
+  <section class="section on-ink why" id="why">
+    <div class="wrap">
+      <div class="why-head">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">Why Seq</p>
+          <h2 class="display h-1">Say what you want.<br /><span class="tail-text">Ship a binary.</span></h2>
+          <p class="lede muted">
+            Seq is a programming language for ordered workflows. You write the steps as requests. Its compiler,
+            <code>seqc</code>, turns the whole workflow into one native program, and keeps everything you need to check what it
+            built.
+          </p>
+        </div>
+        <Image
+          class="why-sparrow"
+          src={sparrow}
+          alt="The Seq mascot, a cyber sparrow in flight"
+          widths={[320, 640, 960]}
+          sizes="(min-width: 900px) 30vw, 60vw"
+          data-reveal
+        />
+      </div>
+
+      <ol class="reasons">
+        {
+          reasons.map((reason, i) => (
+            <li data-reveal style={`--i:${i}`}>
+              <span class="num display" aria-hidden="true">
+                0{i + 1}
+              </span>
+              <h3 class="display h-3">{reason.title}</h3>
+              <p class="muted" set:html={reason.text} />
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="why-foot" data-reveal>
+        <p class="caveat">
+          <strong>What Seq does not promise.</strong> Parsing and step order are deterministic. The synthesized program is
+          not: a request in natural language is not a formal specification, and a program that compiles is not proof that
+          it does what the request meant.
+        </p>
+        <a class="btn" href={href('why/')}>
+          More reasons
+          <Icon name="arrow-up-right" />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How a build works -->
+  <section class="section on-white" id="pipeline">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">How a build works</p>
+        <h2 class="display h-1">One command.<br />Seven stages.</h2>
+        <p class="lede muted">
+          <code>seqc src/main.seq</code> validates the workflow, builds it or reuses the last accepted build, runs it, and
+          lists the results. The model writes code; everything around it is checked, compiled, tested, and confined.
+        </p>
+      </div>
+
+      <ol class="stages">
+        {
+          stages.map((stage, i) => (
+            <li data-reveal style={`--i:${i % 4}`}>
+              <span class="stage-num display">{i + 1}</span>
+              <h3>{stage.title}</h3>
+              <p class="muted" set:html={stage.text} />
+            </li>
+          ))
+        }
+        <li class="stage-more" data-reveal style="--i:3">
+          <a href={`${DOCS}/architecture.md`}>
+            <span class="display h-3">Read the architecture</span>
+            <Icon name="arrow-up-right" />
+          </a>
+        </li>
+      </ol>
+
+      <p class="guarantee" data-reveal>
+        A failed build never replaces the last accepted build and never runs a stale executable.
+      </p>
+    </div>
+  </section>
+
+  <!-- Get started -->
+  <section class="section on-blue start" id="install">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Get started</p>
+        <h2 class="display h-1">Two steps to your first build.</h2>
+        <p class="lede muted">
+          <code>seqc</code> targets Linux x86_64. The reference environment is Ubuntu 24.04 LTS; on Windows, use WSL2.
+        </p>
+      </div>
+
+      <div class="start-grid">
+        <div class="start-step" data-reveal>
+          <h3 class="display h-3"><span>1</span> Install seqc</h3>
+          <Command id="cmd-install" title="Terminal" lines={[`curl -fsSL ${INSTALL_URL} | bash`]} />
+          <p class="muted">
+            Installs for the current user, with no root access. It takes the checksum-verified release package, or builds
+            from source when no package fits.
+          </p>
+        </div>
+        <div class="start-step" data-reveal style="--i:1">
+          <h3 class="display h-3"><span>2</span> Run a workflow</h3>
+          <Command
+            id="cmd-run"
+            title="Terminal"
+            lines={['seqc new top3Company', 'cd top3Company', 'seqc doctor', 'seqc model pull', 'seqc src/main.seq']}
+          />
+          <p class="muted">
+            <code>seqc doctor</code> checks the prerequisites. <code>seqc model pull</code> downloads the model, about 1.1
+            GB, and verifies its SHA-256. It is the only command that downloads anything.
+          </p>
+        </div>
+      </div>
+
+      <a class="btn start-more" href={href('learn/')} data-reveal>
+        Learn Seq
+        <Icon name="arrow-up-right" />
+      </a>
+    </div>
+  </section>
+
+  <!-- Status and documentation -->
+  <section class="section on-paper" id="docs">
+    <div class="wrap docs">
+      <div data-reveal>
+        <p class="eyebrow">Status</p>
+        <h2 class="display h-2">Version {VERSION}</h2>
+        <p class="muted status-lead">
+          The compiler pipeline is implemented and covered by a deterministic test suite that uses a scripted model.
+        </p>
+        <ul class="notes">
+          <li>
+            <strong>Not yet verified with a real model.</strong> The llama.cpp adapter is tested only against a local
+            stand-in for <code>llama-server</code>.
+          </li>
+          <li>The sandbox is proven only on WSL2 so far.</li>
+          <li>Linux x86_64 and the C backend only.</li>
+        </ul>
+        <a class="btn btn-line" href={REPO}>
+          <Icon name="github" />
+          View the source
+        </a>
+      </div>
+
+      <ul class="doc-list" data-reveal style="--i:1">
+        {
+          docs.map((doc) => (
+            <li>
+              <a href={doc.url}>
+                <span>
+                  <strong class="display h-3">{doc.title}</strong>
+                  {doc.text}
+                </span>
+                <Icon name="arrow-up-right" />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Try Seq */
+  .try {
+    display: grid;
+    gap: clamp(40px, 5vw, 72px);
+    align-items: start;
+  }
+  .try-intro {
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+  .try-notes {
+    display: grid;
+    gap: 12px;
+  }
+  .try-notes li {
+    position: relative;
+    padding-left: 26px;
+    color: var(--ink-70);
+  }
+  .try-notes li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.42em;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+  .fineprint {
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-55);
+    font-size: 13.5px;
+  }
+
+  /* Why Seq */
+  .why {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(50% 40% at 92% 6%, rgba(14, 109, 255, 0.45), transparent 70%),
+      radial-gradient(36% 34% at 0% 100%, rgba(106, 61, 240, 0.3), transparent 70%), var(--ink);
+  }
+  .why-head {
+    display: grid;
+    gap: 24px;
+    align-items: center;
+  }
+  .why-head :global(.why-sparrow) {
+    justify-self: center;
+    width: min(74%, 420px);
+    height: auto;
+    margin-bottom: 40px;
+    filter: drop-shadow(0 30px 60px rgba(14, 109, 255, 0.45));
+  }
+
+  .reasons {
+    display: grid;
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .reasons li {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    padding: clamp(26px, 3vw, 38px);
+    background: var(--ink);
+    transition: background-color 0.3s;
+  }
+  .reasons li:hover {
+    background: #07164f;
+  }
+  .num {
+    margin-bottom: clamp(20px, 4vw, 56px);
+    color: transparent;
+    font-size: clamp(2.6rem, 4.4vw, 3.8rem);
+    -webkit-text-stroke: 1.5px var(--sky);
+  }
+  .reasons li:hover .num {
+    background: var(--tail);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-stroke: 0;
+  }
+
+  .why-foot {
+    display: grid;
+    gap: 28px;
+    justify-items: start;
+    margin-top: clamp(36px, 5vw, 56px);
+  }
+  .caveat {
+    max-width: 46rem;
+    padding-left: 20px;
+    border-left: 3px solid var(--sky);
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .caveat strong {
+    color: #fff;
+  }
+
+  /* How a build works */
+  .stages {
+    display: grid;
+    gap: 16px;
+    counter-reset: stage;
+  }
+  .stages li {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    min-height: 220px;
+    padding: 26px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+  }
+  .stages h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .stages p {
+    font-size: 15px;
+  }
+  .stage-num {
+    width: fit-content;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, var(--sky), var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 3.4rem;
+  }
+  .stages .stage-more {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: var(--blue);
+    color: #fff;
+    transition: background-color 0.2s;
+  }
+  .stages .stage-more:hover {
+    background: var(--ink);
+  }
+  .stage-more a {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    gap: 24px;
+    padding: 26px;
+  }
+  .stage-more :global(svg) {
+    width: 34px;
+    height: 34px;
+    align-self: flex-end;
+  }
+  .guarantee {
+    max-width: 44rem;
+    margin-top: 40px;
+    padding-left: 20px;
+    border-left: 3px solid var(--blue);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  /* Get started */
+  .start {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(50% 70% at 100% 0%, rgba(71, 240, 253, 0.45), transparent 62%),
+      linear-gradient(120deg, #06164f 0%, #0a3fd0 55%, var(--blue) 100%);
+    color: #fff;
+  }
+  .start-grid {
+    display: grid;
+    gap: 40px 24px;
+  }
+  .start-step {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+    min-width: 0;
+  }
+  .start-step h3 {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .start-step h3 span {
+    display: grid;
+    place-items: center;
+    width: 1.5em;
+    height: 1.5em;
+    background: #fff;
+    color: var(--blue);
+  }
+  .start-more {
+    margin-top: 44px;
+  }
+
+  /* Status and documentation */
+  .docs {
+    display: grid;
+    gap: 56px;
+    align-items: start;
+  }
+  .status-lead {
+    max-width: 27rem;
+    margin-top: 18px;
+  }
+  .notes {
+    display: grid;
+    gap: 12px;
+    max-width: 27rem;
+    margin-block: 24px 32px;
+    color: var(--ink-70);
+  }
+  .notes li {
+    padding-left: 18px;
+    border-left: 2px solid var(--sky);
+  }
+  .notes strong {
+    color: var(--ink);
+  }
+  .doc-list {
+    border-top: 1px solid var(--line);
+  }
+  .doc-list a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 22px 4px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-70);
+    transition:
+      padding 0.25s ease-out,
+      color 0.2s;
+  }
+  .doc-list strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .doc-list :global(svg) {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    color: var(--blue);
+    transition: transform 0.25s ease-out;
+  }
+  .doc-list a:hover {
+    padding-inline: 14px 4px;
+  }
+  .doc-list a:hover strong {
+    color: var(--blue);
+  }
+  .doc-list a:hover :global(svg) {
+    transform: translate(3px, -3px);
+  }
+
+  @media (min-width: 640px) {
+    .reasons,
+    .stages {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 900px) {
+    .why-head {
+      grid-template-columns: 1.5fr 1fr;
+    }
+    .why-head :global(.why-sparrow) {
+      justify-self: end;
+      width: 100%;
+      max-width: 440px;
+    }
+    .start-grid {
+      grid-template-columns: 1.45fr 1fr;
+    }
+    .docs {
+      grid-template-columns: 1fr 1.2fr;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .try {
+      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+    }
+    .try-intro {
+      position: sticky;
+      top: 40px;
+    }
+    .reasons,
+    .stages {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+</style>

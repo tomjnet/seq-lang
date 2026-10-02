@@ -1,0 +1,413 @@
+/* The Seq website. Colours and shapes come from the logo: the navy of the
+   wordmark, the cyan-to-blue gradient of the q's tail, and the violet of the
+   sparrow's wing. */
+
+:root {
+  --ink: #030b26;
+  --navy: #071447;
+  --deep: #0a2a9c;
+  --blue: #0e6dff;
+  --sky: #2db9fe;
+  --cyan: #47f0fd;
+  --violet: #6a3df0;
+  --paper: #f2f6fd;
+  --line: rgba(3, 11, 38, 0.12);
+  --ink-70: rgba(3, 11, 38, 0.72);
+  --ink-55: rgba(3, 11, 38, 0.58);
+  --tail: linear-gradient(135deg, var(--cyan) 0%, var(--sky) 50%, var(--blue) 100%);
+
+  --display: 'Archivo Variable', 'Arial Narrow', Impact, sans-serif;
+  --sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --gutter: clamp(24px, 4.4vw, 64px);
+  --wrap: 82rem;
+  --radius: 18px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 24px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre,
+table {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--mono);
+}
+
+code {
+  font-size: 0.9em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--blue);
+  color: #fff;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -64px;
+  z-index: 100;
+  padding: 10px 18px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+}
+.skip:focus {
+  top: 16px;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ---------------------------------------------------------------------------
+   Type
+   ------------------------------------------------------------------------ */
+
+.display {
+  font-family: var(--display);
+  font-weight: 900;
+  font-stretch: 68%;
+  line-height: 0.92;
+  letter-spacing: -0.012em;
+  text-transform: uppercase;
+}
+
+.h-hero {
+  font-size: clamp(3.4rem, 9.2vw, 8.2rem);
+}
+.h-1 {
+  font-size: clamp(2.8rem, 7vw, 6rem);
+}
+.h-2 {
+  font-size: clamp(2.3rem, 5vw, 4.2rem);
+}
+.h-3 {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1;
+}
+
+/* The accent of the logo: cyan running into blue. */
+.tail-text {
+  background: var(--tail);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+/* The q's tail, as a bullet. */
+.eyebrow::before {
+  content: '';
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--tail);
+  transform: skewY(40deg);
+}
+
+.lede {
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+.btn:hover svg {
+  transform: translate(2px, -2px);
+}
+.btn:hover {
+  background: var(--cyan);
+}
+
+.btn-ink {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-ink:hover {
+  background: var(--blue);
+}
+
+.btn-blue {
+  background: var(--blue);
+  color: #fff;
+}
+.btn-blue:hover {
+  background: var(--ink);
+}
+
+.btn-ghost {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+}
+.btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-line {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+.btn-line:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 12px 22px;
+}
+
+/* ---------------------------------------------------------------------------
+   Sections
+   ------------------------------------------------------------------------ */
+
+.section {
+  padding-block: clamp(72px, 10vw, 136px);
+}
+
+.on-paper {
+  background: var(--paper);
+  color: var(--ink);
+}
+.on-white {
+  background: #fff;
+  color: var(--ink);
+}
+.on-ink {
+  background: var(--ink);
+  color: #fff;
+}
+
+.on-ink .muted,
+.on-blue .muted {
+  color: rgba(255, 255, 255, 0.68);
+}
+.muted {
+  color: var(--ink-70);
+}
+
+.section-head {
+  display: grid;
+  gap: 20px;
+  max-width: 54rem;
+  margin-bottom: clamp(40px, 6vw, 72px);
+}
+
+/* Inline code on light and on dark backgrounds. */
+:where(.on-paper, .on-white) :where(p, li, td, dd) code {
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  background: rgba(14, 109, 255, 0.1);
+  color: #0a3fb0;
+}
+:where(.on-ink, .on-blue) :where(p, li, td, dd) code {
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  background: rgba(71, 240, 253, 0.12);
+  color: var(--cyan);
+}
+
+/* ---------------------------------------------------------------------------
+   Code and console windows
+   ------------------------------------------------------------------------ */
+
+.code {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: #dce6ff;
+  tab-size: 4;
+}
+.code .k {
+  color: var(--cyan);
+}
+.code .f {
+  color: #8fb6ff;
+}
+.code .s {
+  color: #ffd9a0;
+}
+.code .c {
+  color: #7f8db8;
+}
+.code .p {
+  color: var(--cyan);
+}
+.code .cmd {
+  color: #fff;
+}
+.code .t {
+  color: var(--sky);
+}
+.code .ok {
+  color: #6ff2b4;
+}
+.code .e {
+  color: #ff8f9c;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Entrance animation
+   ------------------------------------------------------------------------ */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  opacity: 0;
+  animation: fade-up 0.8s ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 0.2s);
+}
+
+/* Elements that rise into place when they scroll into view. Without the
+   script they are simply visible. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s ease-out;
+  transition-delay: calc(var(--i, 0) * 0.08s);
+}
+.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .fade-up {
+    opacity: 1;
+    animation: none;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

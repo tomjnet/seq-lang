@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import Icon from '../components/Icon.astro';
+import { href } from '../site';
+---
+
+<Base title="Page not found">
+  <PageHeader eyebrow="Error 404">
+    <Fragment slot="title">No such <span class="tail-text">step.</span></Fragment>
+    This page is not part of the workflow. The home page is.
+  </PageHeader>
+  <section class="section on-paper">
+    <div class="wrap">
+      <a class="btn btn-ink" href={href()}>
+        Back to the start
+        <Icon name="arrow-up-right" />
+      </a>
+    </div>
+  </section>
+</Base>

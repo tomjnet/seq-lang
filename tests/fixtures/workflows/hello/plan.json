@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "index": 1,
+      "name": "step1",
+      "summary": "Prints the line \"Hello from Seq\" to standard output.",
+      "reads": [],
+      "writes": []
+    }
+  ],
+  "outputs": [],
+  "dependencies": ["libc"]
+}

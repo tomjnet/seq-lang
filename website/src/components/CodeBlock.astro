@@ -1,0 +1,43 @@
+---
+// A dark block of Seq source, console output, or plain text, with an
+// optional caption bar.
+import { consoleLine, escape, seqLine } from '../lib/highlight';
+
+interface Props {
+  code: string;
+  lang?: 'seq' | 'console' | 'text';
+  title?: string;
+}
+const { code, lang = 'text', title } = Astro.props;
+const render = lang === 'seq' ? seqLine : lang === 'console' ? consoleLine : escape;
+const html = code.replace(/\n$/, '').split('\n').map(render).join('\n');
+---
+
+<figure class="block">
+  {title && <figcaption>{title}</figcaption>}
+  <pre class="code" tabindex="0"><code set:html={html} /></pre>
+</figure>
+
+<style>
+  .block {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--ink);
+    box-shadow: 0 30px 60px -36px rgba(3, 11, 38, 0.6);
+  }
+  figcaption {
+    padding: 11px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.55);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  pre {
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: 13px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+</style>

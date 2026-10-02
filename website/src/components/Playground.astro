@@ -1,0 +1,273 @@
+---
+// "Try Seq": pick an example, press Run, and the console replays what seqc
+// prints for it. seqc needs GCC and a local model, so nothing is compiled in
+// the browser; the sessions come from src/data/examples.ts.
+import Icon from './Icon.astro';
+import Window from './Window.astro';
+import { EXAMPLES } from '../data/examples';
+import { consoleLine, seqLines } from '../lib/highlight';
+
+const sessions = Object.fromEntries(
+  EXAMPLES.map((example) => {
+    const render = (lines = example.run) => lines.map((line) => ({ html: consoleLine(line.text), wait: line.wait ?? 0 }));
+    return [
+      example.id,
+      { run: render(), rerun: example.rerun ? render(example.rerun) : null, exit: example.exit, blurb: example.blurb },
+    ];
+  }),
+);
+---
+
+<div class="playground" data-playground>
+  <Window title="src/main.seq" class="pg-window">
+    <label slot="bar" class="picker">
+      <span class="sr-only">Example</span>
+      <select data-example>
+        {EXAMPLES.map((example) => <option value={example.id}>{example.label}</option>)}
+      </select>
+    </label>
+
+    {
+      EXAMPLES.map((example, i) => (
+        <pre class="code source" data-source={example.id} hidden={i !== 0} tabindex="0"><code>{seqLines(example.source).map((line) => (
+          <span class="line" set:html={line || ' '} />
+        ))}</code></pre>
+      ))
+    }
+
+    <div class="controls">
+      <button class="btn btn-blue btn-sm" type="button" data-run>
+        <Icon name="play" />
+        <span data-run-label>Run</span>
+      </button>
+      <p class="blurb" data-blurb>{EXAMPLES[0].blurb}</p>
+    </div>
+
+    <div class="output-head">
+      <span>Output</span>
+      <span class="exit" data-exit></span>
+    </div>
+    <pre class="code output" data-output tabindex="0"><code><span class="c">Press Run to build and run this workflow.</span></code></pre>
+  </Window>
+  <p class="sr-only" role="status" data-status></p>
+  <script type="application/json" data-sessions set:html={JSON.stringify(sessions).replace(/</g, '\\u003c')} />
+</div>
+
+<script>
+  interface Line {
+    html: string;
+    wait: number;
+  }
+  interface Session {
+    run: Line[];
+    rerun: Line[] | null;
+    exit: number;
+    blurb: string;
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-playground]');
+  if (root) {
+    const sessions: Record<string, Session> = JSON.parse(root.querySelector('[data-sessions]')!.textContent!);
+    const picker = root.querySelector<HTMLSelectElement>('[data-example]')!;
+    const runButton = root.querySelector<HTMLButtonElement>('[data-run]')!;
+    const runLabel = root.querySelector<HTMLElement>('[data-run-label]')!;
+    const output = root.querySelector<HTMLElement>('[data-output]')!;
+    const outputCode = output.querySelector('code')!;
+    const exit = root.querySelector<HTMLElement>('[data-exit]')!;
+    const blurb = root.querySelector<HTMLElement>('[data-blurb]')!;
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const idle = outputCode.innerHTML;
+
+    // How often each example has run; a second run is served from the cache.
+    const runs: Record<string, number> = {};
+    // Bumped to abandon a replay that is still printing.
+    let generation = 0;
+
+    function print(html: string) {
+      const line = document.createElement('span');
+      line.innerHTML = html + '\n';
+      outputCode.append(line);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function reset() {
+      generation++;
+      outputCode.innerHTML = idle;
+      exit.textContent = '';
+      exit.className = 'exit';
+      runButton.disabled = false;
+      runLabel.textContent = 'Run';
+    }
+
+    picker.addEventListener('change', () => {
+      root.querySelectorAll<HTMLElement>('[data-source]').forEach((source) => {
+        source.hidden = source.dataset.source !== picker.value;
+      });
+      blurb.textContent = sessions[picker.value].blurb;
+      runs[picker.value] = 0;
+      reset();
+    });
+
+    runButton.addEventListener('click', async () => {
+      const session = sessions[picker.value];
+      const cached = (runs[picker.value] ?? 0) > 0 && session.rerun !== null;
+      const lines = cached ? session.rerun! : session.run;
+      const mine = ++generation;
+
+      runButton.disabled = true;
+      runLabel.textContent = 'Running';
+      outputCode.innerHTML = '';
+      exit.textContent = '';
+      exit.className = 'exit';
+      print('<span class="p">$</span> <span class="cmd">seqc src/main.seq</span>');
+
+      for (const line of lines) {
+        if (!still.matches) await sleep(line.wait + 45);
+        if (mine !== generation) return;
+        print(line.html);
+      }
+
+      runs[picker.value] = (runs[picker.value] ?? 0) + 1;
+      exit.textContent = `exit status ${session.exit}`;
+      exit.classList.add(session.exit === 0 ? 'is-ok' : 'is-error');
+      status.textContent = `Finished with exit status ${session.exit}.`;
+      if (session.rerun && !cached) {
+        blurb.textContent = 'Run it again: nothing changed, so seqc reuses the accepted build.';
+      } else {
+        blurb.textContent = session.blurb;
+      }
+      runButton.disabled = false;
+      runLabel.textContent = session.rerun ? 'Run again' : 'Run';
+    });
+  }
+</script>
+
+<style>
+  .playground {
+    min-width: 0;
+  }
+  .playground :global(.pg-window) {
+    border-color: rgba(3, 11, 38, 0.9);
+    border-radius: var(--radius);
+    background: var(--ink);
+    box-shadow:
+      0 40px 80px -36px rgba(3, 11, 38, 0.55),
+      18px 18px 0 -1px rgba(14, 109, 255, 0.14);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .picker select {
+    max-width: 46vw;
+    padding: 6px 30px 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2347F0FD' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      no-repeat right 8px center / 14px;
+    color: #fff;
+    font: 500 13px var(--sans);
+    cursor: pointer;
+    appearance: none;
+  }
+  .picker option {
+    background: var(--ink);
+    color: #fff;
+  }
+
+  .source {
+    height: clamp(230px, 34vh, 330px);
+    padding: 18px 0;
+    overflow: auto;
+    counter-reset: line;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+  .source[hidden] {
+    display: none;
+  }
+  /* Each line carries its own number, so wrapped lines stay aligned. */
+  .source :global(.line) {
+    position: relative;
+    display: block;
+    padding: 0 20px 0 58px;
+    counter-increment: line;
+  }
+  .source :global(.line)::before {
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 40px;
+    color: rgba(255, 255, 255, 0.28);
+    text-align: right;
+    user-select: none;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 14px 20px;
+    border-block: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .controls .btn :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+  .controls .btn:hover {
+    background: var(--cyan);
+    color: var(--ink);
+  }
+  .controls .btn:hover :global(svg) {
+    transform: none;
+  }
+  .controls .btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .blurb {
+    flex: 1 1 14rem;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .output-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px 0;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .exit {
+    font-family: var(--mono);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .exit.is-ok {
+    color: #6ff2b4;
+  }
+  .exit.is-error {
+    color: #ff8f9c;
+  }
+  .output {
+    height: clamp(220px, 32vh, 320px);
+    padding: 10px 20px 20px;
+    overflow: auto;
+    font-size: 12.5px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+</style>

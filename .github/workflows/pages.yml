@@ -1,0 +1,57 @@
+# Builds the Astro site in website/ and publishes it to GitHub Pages whenever
+# it changes on main. Requires Settings -> Pages -> Source: "GitHub Actions".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; let an in-progress deployment finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy website
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      # The site may be served from https://<owner>.github.io/<repo>/ or from a
+      # custom domain; Pages says which, and the build takes it from there.
+      - name: Build
+        working-directory: website
+        run: >
+          npx astro build
+          --site "${{ steps.pages.outputs.origin }}"
+          --base "${{ steps.pages.outputs.base_path }}"
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: website/dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

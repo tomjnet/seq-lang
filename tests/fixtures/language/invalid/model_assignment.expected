@@ -1,0 +1,5 @@
+FILE:1:7: error[E0202]: model is declared with a call, not an assignment
+    model = "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct"
+          ^
+    hint: write model("https://huggingface.co/<owner>/<repo>")
+seqc: 1 error(s) in FILE

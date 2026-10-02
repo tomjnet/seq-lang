@@ -1,0 +1,403 @@
+---
+import { Image } from 'astro:assets';
+import Icon from './Icon.astro';
+import Window from './Window.astro';
+import sparrow from '../assets/sparrow.png';
+import { HERO_SESSION, HERO_SOURCE } from '../data/examples';
+import { consoleLine, seqLines } from '../lib/highlight';
+import { HERO_VIDEO, href } from '../site';
+
+const video = HERO_VIDEO.src !== '';
+const stats = [
+  { value: '1', label: 'Command, source to results' },
+  { value: '0', label: 'Model calls at run time' },
+  { value: '7', label: 'Checked build stages' },
+];
+---
+
+<section class:list={['hero', { 'has-video': video }]}>
+  <div class="backdrop" aria-hidden="true">
+    {
+      video ? (
+        <video autoplay muted loop playsinline poster={HERO_VIDEO.poster ? href(HERO_VIDEO.poster) : undefined}>
+          <source src={href(HERO_VIDEO.src)} type="video/mp4" />
+        </video>
+      ) : (
+        <>
+          <span class="beam b1"></span>
+          <span class="beam b2"></span>
+          <span class="beam b3"></span>
+        </>
+      )
+    }
+  </div>
+
+  <div class="wrap inner">
+    <div class="copy">
+      <p class="eyebrow fade-up">The Seq programming language</p>
+      <h1 class="display h-hero fade-up" style="--i:1">
+        <span>Ask.</span>
+        <span>Compile.</span>
+        <span class="tail-text">Run.</span>
+      </h1>
+      <p class="sub fade-up" style="--i:2">
+        Seq turns ordered, plain-language requests into a native program: written by a model at compile time, built by
+        GCC, run in a sandbox. Plain words in, <strong>native code out.</strong>
+      </p>
+      <div class="actions fade-up" style="--i:3">
+        <a class="btn" href="#try">
+          Try Seq
+          <Icon name="arrow-up-right" />
+        </a>
+        <a class="btn btn-ghost" href={href('learn/#install')}>Install</a>
+        <p class="badge">
+          <Icon name="shield" />
+          <span>Open source<br />MIT licensed</span>
+        </p>
+      </div>
+      <dl class="stats fade-up" style="--i:4">
+        {
+          stats.map((stat) => (
+            <div>
+              <dt>{stat.label}</dt>
+              <dd>{stat.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    {
+      !video && (
+        <figure class="stage fade-up" style="--i:2">
+          <Image
+            class="sparrow"
+            src={sparrow}
+            alt=""
+            widths={[280, 560, 840]}
+            sizes="(min-width: 1024px) 24vw, 180px"
+            loading="eager"
+          />
+          <Window title="src/main.seq" class="editor">
+            <pre class="code"><code set:html={seqLines(HERO_SOURCE).join('\n')} /></pre>
+          </Window>
+          <Window title="seqc" class="terminal">
+            <pre class="code" data-hero-session><code><span class="p">$</span> <span class="cmd" data-typed>seqc src/main.seq</span>{'\n'}{HERO_SESSION.map((line) => (
+              <span data-line data-wait={line.wait} set:html={consoleLine(line.text) + '\n'} />
+            ))}</code></pre>
+          </Window>
+          <figcaption class="sr-only">
+            A three-step Seq workflow, and an abridged view of what seqc prints while it builds and runs it.
+          </figcaption>
+        </figure>
+      )
+    }
+  </div>
+</section>
+
+<script>
+  // Replays the build in the hero terminal, in a loop, while it is on screen.
+  const session = document.querySelector<HTMLElement>('[data-hero-session]');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (session && !still.matches) {
+    const typed = session.querySelector<HTMLElement>('[data-typed]')!;
+    const lines = Array.from(session.querySelectorAll<HTMLElement>('[data-line]'));
+    const command = typed.textContent ?? '';
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let visible = false;
+    let running = false;
+
+    async function play() {
+      if (running) return;
+      running = true;
+      while (visible) {
+        lines.forEach((line) => (line.style.visibility = 'hidden'));
+        typed.textContent = '';
+        typed.classList.add('caret');
+        await sleep(700);
+        for (const char of command) {
+          typed.textContent += char;
+          await sleep(45 + Math.random() * 50);
+        }
+        await sleep(350);
+        typed.classList.remove('caret');
+        for (const line of lines) {
+          await sleep(Number(line.dataset.wait ?? 0) + 80);
+          line.style.visibility = '';
+        }
+        await sleep(7000);
+      }
+      running = false;
+    }
+
+    new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) play();
+    }).observe(session);
+  }
+</script>
+
+<style>
+  .hero {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow: hidden;
+    color: #fff;
+  }
+
+  /* The backdrop: navy where the headline sits, opening into the blue and
+     cyan of the logo's tail. A hero video covers it entirely. */
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background:
+      radial-gradient(48% 62% at 88% 8%, rgba(71, 240, 253, 0.55), transparent 62%),
+      radial-gradient(46% 60% at 104% 96%, rgba(106, 61, 240, 0.7), transparent 66%),
+      linear-gradient(112deg, var(--ink) 0%, #06164f 30%, #0a3fd0 64%, var(--blue) 100%);
+  }
+  .backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(3, 11, 38, 0.55), transparent 32%);
+    pointer-events: none;
+  }
+  .has-video .backdrop::after {
+    background:
+      linear-gradient(90deg, rgba(3, 11, 38, 0.86) 0%, rgba(3, 11, 38, 0.5) 45%, rgba(3, 11, 38, 0.1) 100%),
+      linear-gradient(0deg, rgba(3, 11, 38, 0.6), transparent 40%);
+  }
+  .backdrop video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The tail of the q, repeated large across the backdrop. */
+  .beam {
+    position: absolute;
+    width: clamp(70px, 9vw, 150px);
+    border-radius: clamp(8px, 1vw, 16px);
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+  .b1 {
+    left: 40%;
+    top: 4%;
+    height: 34%;
+    opacity: 0.16;
+  }
+  .b2 {
+    left: 58%;
+    top: 38%;
+    height: 52%;
+    opacity: 0.22;
+  }
+  .b3 {
+    left: 88%;
+    top: 30%;
+    height: 44%;
+    opacity: 0.3;
+  }
+
+  .inner {
+    display: grid;
+    align-items: center;
+    gap: clamp(40px, 5vw, 72px);
+    padding-block: clamp(96px, 13vh, 132px) clamp(32px, 5vh, 60px);
+  }
+
+  .copy {
+    min-width: 0;
+  }
+  .eyebrow {
+    margin-bottom: clamp(16px, 2.6vh, 28px);
+    color: rgba(255, 255, 255, 0.78);
+  }
+  h1 {
+    font-size: clamp(3.4rem, min(8.8vw, 13.6vh), 7.6rem);
+  }
+  h1 span {
+    display: block;
+    width: fit-content;
+  }
+  .sub {
+    max-width: 31rem;
+    margin-top: clamp(18px, 2.8vh, 30px);
+    color: rgba(255, 255, 255, 0.74);
+    font-size: clamp(0.95rem, 1.15vw, 1.08rem);
+    line-height: 1.65;
+  }
+  .sub strong {
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 16px;
+    margin-top: clamp(22px, 3.6vh, 38px);
+  }
+  .badge {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-left: 10px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .badge :global(svg) {
+    width: 30px;
+    height: 30px;
+    stroke-width: 1.5;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, max-content));
+    gap: 22px clamp(20px, 3.4vw, 52px);
+    margin-top: clamp(26px, 4.4vh, 50px);
+  }
+  .stats div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .stats dd {
+    font-size: clamp(2rem, min(4vw, 6vh), 3.2rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .stats dt {
+    max-width: 9.5rem;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* The stage: where the windows are now, and what a hero video replaces. */
+  .stage {
+    position: relative;
+    min-width: 0;
+    font-size: clamp(10.5px, 0.86vw, 13px);
+  }
+  .stage :global(.code) {
+    padding: 1.3em 1.5em;
+    overflow: hidden;
+    font-size: 1em;
+    white-space: pre;
+  }
+  .stage :global(.editor) {
+    display: none;
+  }
+  /* Long lines fade out at the window's edge. */
+  .stage :global(.code) {
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 98%);
+    mask-image: linear-gradient(90deg, #000 88%, transparent 98%);
+  }
+  .stage :global(.terminal) {
+    position: relative;
+    background: rgba(5, 16, 60, 0.94);
+  }
+  .stage :global(.caret)::after {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 1.1em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: var(--cyan);
+    animation: blink 1s steps(2) infinite;
+  }
+  .stage :global(.sparrow) {
+    position: absolute;
+    z-index: 2;
+    right: -4%;
+    bottom: calc(100% - 34px);
+    width: clamp(150px, 34%, 200px);
+    height: auto;
+    filter: drop-shadow(0 24px 30px rgba(1, 5, 20, 0.5));
+    animation: hover 7s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  @keyframes hover {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+      transform: translateY(-14px) rotate(1deg);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .badge {
+      display: flex;
+    }
+    .stage {
+      padding-left: 40px;
+    }
+    .stage :global(.editor) {
+      display: block;
+    }
+    .stage :global(.terminal) {
+      width: fit-content;
+      max-width: 100%;
+      margin: -26px 0 0 -40px;
+    }
+    /* Beside the terminal, over the corner of the editor. */
+    .stage :global(.sparrow) {
+      right: -9%;
+      bottom: 3%;
+      width: clamp(200px, 40%, 320px);
+    }
+    /* The terminal is as wide as its text here, so nothing needs to fade. */
+    .stage :global(.terminal .code) {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .inner {
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    }
+    .stage {
+      margin-top: 4vh;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .stage {
+      margin-top: 96px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stage :global(.sparrow) {
+      animation: none;
+    }
+  }
+</style>

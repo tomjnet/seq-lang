@@ -1,0 +1,3 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "demo"

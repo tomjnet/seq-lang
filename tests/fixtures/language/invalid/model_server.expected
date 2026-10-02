@@ -1,0 +1,5 @@
+FILE:1:66: error[E0310]: model server argument is not supported in v0.1
+    model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct", "10.0.0.45")
+                                                                     ^
+    hint: remove the second argument; the inference runtime is set in the user configuration
+seqc: 1 error(s) in FILE

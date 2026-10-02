@@ -1,0 +1,199 @@
+# gitignore template for C, C++, and Rust projects.
+# Copy to the repository root as `.gitignore`.
+
+# ---------------------------------------------------------------------------
+# C / C++ — compiler and linker output
+# ---------------------------------------------------------------------------
+
+# Prerequisites and dependency files
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.slo
+*.lo
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Static libraries
+*.a
+*.la
+*.lai
+*.lib
+
+# Shared libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Linker and MSVC intermediates
+*.ilk
+*.map
+*.exp
+*.idb
+*.ipdb
+*.iobj
+
+# Debug symbols
+*.pdb
+*.dSYM/
+*.su
+*.dwo
+
+# Fortran/C++20 module artifacts
+*.mod
+*.smod
+*.pcm
+*.ifc
+gcm.cache/
+
+# Kernel module build
+*.mod.c
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# ---------------------------------------------------------------------------
+# C / C++ — build systems
+# ---------------------------------------------------------------------------
+
+# Out-of-source build directories
+build/
+build-*/
+out/
+bin/
+obj/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+_deps/
+
+# Ninja
+.ninja_deps
+.ninja_log
+
+# Autotools
+autom4te.cache/
+config.log
+config.status
+.deps/
+.libs/
+libtool
+
+# Package managers
+vcpkg_installed/
+conan.lock
+conanbuildinfo.*
+conaninfo.txt
+CMakeLists.txt.user
+
+# ---------------------------------------------------------------------------
+# C / C++ — analysis, coverage, and profiling
+# ---------------------------------------------------------------------------
+
+*.gcno
+*.gcda
+*.gcov
+*.profraw
+*.profdata
+gmon.out
+callgrind.out.*
+massif.out.*
+vgcore.*
+core
+core.[0-9]*
+.ccls-cache/
+.clangd/
+.cache/
+
+# ---------------------------------------------------------------------------
+# Rust
+# ---------------------------------------------------------------------------
+
+# Cargo build output
+target/
+debug/
+
+# rustfmt backups
+**/*.rs.bk
+
+# Mutation testing (cargo-mutants)
+**/mutants.out*/
+
+# Cargo.lock is intentionally NOT ignored: commit it for reproducible builds.
+
+# ---------------------------------------------------------------------------
+# Editors and IDEs
+# ---------------------------------------------------------------------------
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+*.user
+*.suo
+*.sln.docstates
+*.code-workspace
+
+# ---------------------------------------------------------------------------
+# Operating system
+# ---------------------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------------------------------------------------------------------------
+# Local environment and secrets
+# ---------------------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Seq
+# ---------------------------------------------------------------------------
+
+# Outputs and compiler state of the example projects when they are built.
+examples/*/output/
+examples/*/seq.lock
+
+# The website (Astro): dependencies, build output, and generated types.
+website/node_modules/
+website/dist/
+website/.astro/

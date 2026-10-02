@@ -1,0 +1,6 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct", "10.0.0.45")
+backend.C()
+name = "demo"
+
+step step1():
+    ask("print hello")

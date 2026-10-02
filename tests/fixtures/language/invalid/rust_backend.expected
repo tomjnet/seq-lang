@@ -1,0 +1,5 @@
+FILE:2:9: error[E0305]: backend.Rust() is not supported in v0.1
+    backend.Rust()
+            ^
+    hint: use backend.C()
+seqc: 1 error(s) in FILE

@@ -1,0 +1,87 @@
+---
+import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { SITE, href } from '../site';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title, description = SITE.description } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.title}` : `${SITE.title} · ${SITE.slogan}`;
+// Social cards need an absolute address, which exists once the build is given --site.
+const card = Astro.site ? new URL(href('og.jpg'), Astro.site).href : undefined;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#030B26" />
+    <meta name="generator" content={Astro.generator} />
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:site_name" content={SITE.title} />
+    <meta property="og:title" content={title ?? `${SITE.title}: ${SITE.slogan}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {card && <meta property="og:image" content={card} />}
+    <meta name="twitter:card" content={card ? 'summary_large_image' : 'summary'} />
+    <link rel="icon" href={href('favicon.svg')} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={href('apple-touch-icon.png')} />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+
+    <script>
+      // Reveal-on-scroll for [data-reveal], and copy buttons for [data-copy].
+      const revealed = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            entry.target.classList.add('is-in');
+            revealed.unobserve(entry.target);
+          }
+        },
+        { rootMargin: '0px 0px -8% 0px' },
+      );
+      document.querySelectorAll('[data-reveal]').forEach((el) => revealed.observe(el));
+
+      document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const block = document.getElementById(button.dataset.copy ?? '');
+          if (!block) return;
+          // Command blocks draw their "$" prompts in CSS, so the text is clean.
+          const lines = block.querySelectorAll('[data-line]');
+          const text = lines.length
+            ? Array.from(lines, (line) => line.textContent).join('\n')
+            : (block.textContent ?? '');
+          const label = button.querySelector('[data-copy-label]') ?? button;
+          const before = label.textContent;
+          try {
+            await navigator.clipboard.writeText(text);
+            label.textContent = 'Copied';
+          } catch {
+            label.textContent = 'Copy failed';
+          }
+          setTimeout(() => (label.textContent = before), 1600);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,252 @@
+# Release pipeline: pushing a tag such as v0.1.0 builds and tests seqc for
+# Linux x86_64, packages it and publishes a GitHub Release with SHA256SUMS.
+# install.sh downloads these assets.
+#
+#   git tag -a v0.1.0 -m "seqc 0.1.0" && git push origin v0.1.0
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and (re)publish, e.g. v0.1.0 (0.1.0 also works)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  ASSET: seqc-linux-x86_64
+
+jobs:
+  validate:
+    name: Validate tag
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      # Accepts "v0.1.0" or "0.1.0" from the manual form and checks the tag
+      # exists before anything else, so a typo fails with a clear message.
+      - name: Resolve tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          raw=${INPUT_TAG:-$GITHUB_REF_NAME}
+          raw=${raw//[[:space:]]/}
+          tag="v${raw#v}"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$raw' is not a release tag; use the form v1.2.3"
+            exit 1
+          fi
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" > /dev/null 2>&1; then
+            echo "::error::Tag $tag does not exist. Create and push it first: git tag -a $tag -m \"seqc ${tag#v}\" origin/main && git push origin $tag"
+            exit 1
+          fi
+          echo "Releasing $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Tag must match CMakeLists.txt and CHANGELOG.md
+        id: version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          commit=$(git rev-parse --short HEAD)
+          version=$(sed -n 's/^  VERSION \([0-9][0-9.]*\)$/\1/p' CMakeLists.txt)
+          echo "Tag $TAG at $commit, CMakeLists.txt version $version"
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error file=CMakeLists.txt::Tag $TAG does not match project VERSION $version (commit $commit)"
+            exit 1
+          fi
+          heading=$(grep -E "^## \[?${version//./\\.}\]?( |$)" CHANGELOG.md | head -n 1 || true)
+          if [ -z "$heading" ]; then
+            echo "::error file=CHANGELOG.md::No '## $version' section in CHANGELOG.md (commit $commit)"
+            exit 1
+          fi
+          if grep -qi unreleased <<<"$heading"; then
+            echo "::error file=CHANGELOG.md::CHANGELOG.md still marks $version as unreleased: put the release date in '$heading'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (x86_64)
+    needs: validate
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ needs.validate.outputs.tag }}
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build python3 curl libgtest-dev
+
+      # The package's runtime library is linked into generated programs with
+      # the user's C library, so install.sh only offers the package to hosts
+      # with at least this runner's glibc. Keep the two in step.
+      - name: Runner glibc must match install.sh
+        run: |
+          built=$(getconf GNU_LIBC_VERSION | awk '{ print $2 }')
+          wanted=$(sed -n 's/^readonly MIN_GLIBC_VERSION="\(.*\)"$/\1/p' install.sh)
+          echo "runner glibc $built, install.sh MIN_GLIBC_VERSION $wanted"
+          if [ "$built" != "$wanted" ]; then
+            echo "::error file=install.sh::MIN_GLIBC_VERSION is $wanted but the release is built with glibc $built"
+            exit 1
+          fi
+
+      # libstdc++ and libgcc are linked into seqc, so the binary depends on
+      # glibc only and does not need a matching C++ runtime on the host.
+      - name: Build and test
+        run: |
+          cmake --preset release \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
+          cmake --build --preset release
+          ctest --preset release
+          cmake --install build/release --prefix "$PWD/stage" --strip
+
+      - name: Verify the installed tree
+        run: |
+          file stage/bin/seqc
+          ldd stage/bin/seqc
+          if ldd stage/bin/seqc | grep -Eq 'libstdc\+\+|libgcc_s'; then
+            echo "::error::seqc depends on a shared C++ runtime"
+            exit 1
+          fi
+          stage/bin/seqc --version
+          stage/bin/seqc --version | grep -q "seqc ${VERSION//./\\.}"
+          work=$(mktemp -d)
+          (cd "$work" && "$GITHUB_WORKSPACE/stage/bin/seqc" new probe &&
+            "$GITHUB_WORKSPACE/stage/bin/seqc" check probe/src/main.seq)
+          stage/bin/seqc doctor || true
+
+      - name: Package
+        run: |
+          mkdir -p "dist/$ASSET"
+          cp -r stage/bin stage/lib stage/share "dist/$ASSET/"
+          cp LICENSE THIRD_PARTY_NOTICES.md README.md CHANGELOG.md "dist/$ASSET/"
+          tar -C dist --owner=0 --group=0 --numeric-owner \
+            -czf "dist/$ASSET.tar.gz" "$ASSET"
+          tar -tzf "dist/$ASSET.tar.gz"
+
+      - name: Run on other distributions
+        run: |
+          for image in ubuntu:24.04 debian:13 fedora:42; do
+            echo "::group::$image"
+            docker run --rm -v "$PWD/dist/$ASSET:/seqc:ro" -w /tmp "$image" sh -euc '
+              /seqc/bin/seqc --version
+              /seqc/bin/seqc new probe
+              /seqc/bin/seqc check probe/src/main.seq
+            '
+            echo "::endgroup::"
+          done
+
+      # The path every user takes: install.sh downloading this package.
+      - name: Install the package with install.sh
+        run: |
+          releases="$RUNNER_TEMP/releases"
+          mkdir -p "$releases/download/$TAG"
+          cp "dist/$ASSET.tar.gz" "$releases/download/$TAG/"
+          (cd "$releases/download/$TAG" && sha256sum "$ASSET.tar.gz" > SHA256SUMS)
+          SEQ_INSTALL_RELEASES_URL="file://$releases" \
+            bash install.sh --binary --ref "$TAG" --prefix "$RUNNER_TEMP/seqc"
+          "$RUNNER_TEMP/seqc/bin/seqc" --version
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ASSET }}
+          path: dist/${{ env.ASSET }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    needs: [validate, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write      # create the release and upload assets
+      id-token: write      # sign the provenance attestation
+      attestations: write  # store the attestation
+    env:
+      TAG: ${{ needs.validate.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.ASSET }}
+          path: dist
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum "$ASSET.tar.gz" > SHA256SUMS
+          cat SHA256SUMS
+
+      # Attestations of a private repository need a GitHub Enterprise plan,
+      # so they are made only when the repository is public.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/${{ env.ASSET }}.tar.gz
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '
+            /^## / {
+              if (found) exit
+              heading = $2
+              gsub(/[\[\]]/, "", heading)
+              if (heading == v) found = 1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          cat >> notes.md <<EOF
+
+          ## Install
+
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/HEAD/install.sh | bash -s -- --ref $TAG
+          \`\`\`
+
+          Verify a download: \`sha256sum -c SHA256SUMS --ignore-missing\`.
+          EOF
+          cat notes.md
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" dist/* \
+              --verify-tag \
+              --title "seqc $VERSION" \
+              --notes-file notes.md
+          fi

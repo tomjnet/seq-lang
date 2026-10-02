@@ -1,0 +1,523 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import Command from '../components/Command.astro';
+import Icon from '../components/Icon.astro';
+import { EXAMPLES } from '../data/examples';
+import { DOCS, INSTALL_URL, REPO, href } from '../site';
+
+const toc = [
+  { id: 'install', label: 'Install' },
+  { id: 'first', label: 'Your first workflow' },
+  { id: 'tour', label: 'A tour of the language' },
+  { id: 'commands', label: 'Commands' },
+  { id: 'failures', label: 'When something fails' },
+  { id: 'reference', label: 'Reference' },
+];
+
+const needs = [
+  ['Install seqc', 'Linux x86_64, <code>bash</code>, and <code>curl</code>. Building from source also needs CMake 3.28 or newer, Ninja, and GCC 13 or newer.'],
+  ['Compile and run workflows', 'A kernel 6.2 or newer with Landlock, GCC with the static C library, <code>g++</code>, Google Test, and llama.cpp’s <code>llama-server</code>.'],
+];
+
+const hello = EXAMPLES[0].source;
+
+const results = `Results:
+  output/company.txt  (212 bytes)
+  output/top3Company.png  (4.1 KiB)  final`;
+
+const tree = `top3Company/
+├── seq.lock                 pinned model (written by seqc model pull)
+├── src/main.seq             the workflow
+├── input/                   read-only data for the workflow
+└── output/
+    ├── company.txt          published results
+    ├── top3Company.png
+    └── temp/                compiler-owned: generated C, assembly,
+                             executable, tests, and run records`;
+
+const header = [
+  ['<code>model("&lt;url&gt;")</code>', 'Which model writes the program: <code>https://huggingface.co/&lt;owner&gt;/&lt;repo&gt;</code>, optionally followed by <code>/tree/&lt;revision&gt;</code>.'],
+  ['<code>backend.C()</code>', 'The language of the generated program. <code>C</code> is the only backend in v0.1.'],
+  ['<code>name = "&lt;name&gt;"</code>', 'The project name and the basename of generated artifacts. Letters, digits, underscores, and hyphens; at most 64 characters.'],
+];
+
+const stepsCode = `step <name>():
+    ask("<request>")
+    ask("<another request>")`;
+
+const rules = [
+  'A workflow has at least one step. Steps run in source order.',
+  'A step name is a label, not something that can be called. Names are unique.',
+  'A step holds one or more <code>ask("...")</code> statements, one per line, indented exactly four spaces.',
+  'Strings are double-quoted and single-line. A comment runs from <code>#</code> to the end of the line.',
+  'Tabs are rejected everywhere. Indentation is zero or four spaces.',
+];
+
+const limits = [
+  ['Source file size', '1 MiB'],
+  ['<code>name</code> length', '64 characters'],
+  ['One request', '4096 bytes'],
+  ['Steps per workflow', '64'],
+  ['<code>ask()</code> statements per step', '16'],
+];
+
+const diagnostic = `src/main.seq:6:9: error[E0204]: ask requires parentheses
+        ask "print Hello from Seq"
+            ^
+    hint: write ask("...")`;
+
+const commands = [
+  ['seqc new &lt;name&gt;', 'Create a project. Needs no model and no compiler.'],
+  ['seqc &lt;file.seq&gt;', 'Validate, build or reuse the cached build, run, and list results.'],
+  ['seqc check &lt;file.seq&gt;', 'Parse and validate only.'],
+  ['seqc doctor', 'Check the prerequisites on this host.'],
+  ['seqc model pull [--update]', 'Download, verify, and lock the project’s model.'],
+  ['seqc clean [--all]', 'Remove run records; <code>--all</code> also removes build artifacts. Outputs and inputs are kept.'],
+  ['seqc --settings', 'List every setting and its default.'],
+];
+
+const failures = [
+  ['2', 'Bad command line or setting', 'Read the message; <code>seqc --help</code>.'],
+  ['3', 'The workflow is not valid', 'Fix the reported <code>path:line:column</code>.'],
+  ['4', 'The model could not be used, or its response was unusable', '<code>seqc doctor</code>; <code>seqc model pull</code>; rerun, with <code>--rebuild</code> to ask again.'],
+  ['5', 'The generated program or its tests were not accepted within the repair limit', 'Inspect <code>output/temp/runs/&lt;run-id&gt;/attempts/</code>; reword the requests; rerun.'],
+  ['6', 'The program failed, hit a limit, or produced invalid outputs', 'Read the step message. Nothing was published.'],
+  ['7', 'A filesystem or isolation rule stopped the run', 'An output would overwrite a file seqc did not create, another <code>seqc</code> is running, or the sandbox is unavailable.'],
+  ['8', 'A prerequisite is missing', '<code>seqc doctor</code>.'],
+];
+
+const reference = [
+  { title: 'Language', text: 'Syntax, limits, every diagnostic code, exit statuses.', url: `${DOCS}/language.md` },
+  { title: 'Architecture', text: 'Pipeline, model protocol, build cache, manifests, settings.', url: `${DOCS}/architecture.md` },
+  { title: 'Runtime', text: 'The contract between seqc and generated code.', url: `${DOCS}/runtime.md` },
+  { title: 'Security', text: 'The sandbox, what it denies, and known limits.', url: `${DOCS}/security.md` },
+  { title: 'Examples', text: 'The projects this site shows, ready to build.', url: `${REPO}/tree/main/examples` },
+];
+---
+
+<Base
+  title="Learn Seq"
+  description="Install seqc, build your first workflow, and tour the whole Seq programming language on one page."
+>
+  <PageHeader eyebrow="Learn">
+    <Fragment slot="title">Learn <span class="tail-text">Seq.</span></Fragment>
+    From an empty directory to a published result, then the whole Seq programming language on one page. It is a small
+    language: three declarations and a list of steps.
+  </PageHeader>
+
+  <div class="on-paper">
+    <div class="wrap layout">
+      <nav class="toc" aria-label="On this page">
+        <p>On this page</p>
+        <ol>
+          {
+            toc.map((item, i) => (
+              <li>
+                <a href={`#${item.id}`}>
+                  <span>0{i + 1}</span>
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+
+      <div class="content">
+        <section id="install">
+          <p class="eyebrow">01</p>
+          <h2 class="display h-2">Install</h2>
+          <p class="lede muted">
+            <code>seqc</code> targets Linux x86_64. The reference environment is Ubuntu 24.04 LTS; on Windows, use WSL2.
+          </p>
+          <Command id="learn-install" title="Install seqc" lines={[`curl -fsSL ${INSTALL_URL} | bash`]} />
+          <p>
+            The installer needs no root access. By default it downloads the pre-built package of the latest release and
+            verifies its SHA-256 checksum; when no package fits, it builds from source. It never downloads a model and
+            never installs system packages. Run it with <code>--help</code> for the options, including
+            <code>--from-source</code>, <code>--prefix</code>, and <code>--uninstall</code>.
+          </p>
+          <div class="table">
+            <table>
+              <thead>
+                <tr><th>To</th><th>You need</th></tr>
+              </thead>
+              <tbody>
+                {needs.map(([to, need]) => <tr><td>{to}</td><td set:html={need} /></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <p>On Ubuntu, the build tools and Google Test come from one command:</p>
+          <Command
+            id="learn-apt"
+            title="Ubuntu 24.04"
+            lines={['sudo apt install build-essential cmake ninja-build libgtest-dev curl python3']}
+          />
+          <p>
+            <code>llama-server</code> comes from <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>. Put it on
+            your <code>PATH</code>, or name it with the <code>model.llama_server</code> setting.
+          </p>
+        </section>
+
+        <section id="first">
+          <p class="eyebrow">02</p>
+          <h2 class="display h-2">Your first workflow</h2>
+          <p class="lede muted">Five commands take you from nothing to published results.</p>
+          <Command
+            id="learn-first"
+            title="Terminal"
+            lines={['seqc new top3Company', 'cd top3Company', 'seqc doctor', 'seqc model pull', 'seqc src/main.seq']}
+          />
+          <ul class="points">
+            <li><code>seqc new</code> creates the project. It needs no model and no compiler.</li>
+            <li><code>seqc doctor</code> says, one line per prerequisite, whether this host can compile and run workflows.</li>
+            <li>
+              <code>seqc model pull</code> downloads the model, about 1.1 GB, verifies its SHA-256, and writes
+              <code>seq.lock</code>. It is the only command that downloads anything. A build never does.
+            </li>
+            <li>
+              <code>seqc src/main.seq</code> validates the workflow, builds it or reuses the last accepted build, runs it,
+              and lists the results.
+            </li>
+          </ul>
+          <CodeBlock code={results} lang="console" title="What the last command ends with" />
+          <p>A project keeps your source, your inputs, and everything the compiler made, side by side:</p>
+          <CodeBlock code={tree} title="Project layout" />
+        </section>
+
+        <section id="tour">
+          <p class="eyebrow">03</p>
+          <h2 class="display h-2">A tour of the language</h2>
+          <p class="lede muted">
+            A Seq source file declares a model, a backend, a name, and an ordered list of steps. This is a complete
+            program:
+          </p>
+          <CodeBlock code={hello} lang="seq" title="src/main.seq" />
+
+          <h3>Header declarations</h3>
+          <p>
+            Each of the three is required exactly once. They may come in any order, and all of them come before the first
+            step.
+          </p>
+          <div class="table">
+            <table>
+              <thead>
+                <tr><th>Declaration</th><th>Rule</th></tr>
+              </thead>
+              <tbody>
+                {header.map(([form, rule]) => <tr><td set:html={form} /><td set:html={rule} /></tr>)}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Steps and requests</h3>
+          <CodeBlock code={stepsCode} lang="seq" />
+          <ul class="points">
+            {rules.map((rule) => <li set:html={rule} />)}
+          </ul>
+          <p>
+            <code>ask()</code> is a compile-time directive. The model receives the whole workflow at once, so a later
+            step can use what an earlier step creates. The generated executable never contacts the model.
+          </p>
+
+          <h3>Limits</h3>
+          <p>Exceeding a limit is a validation error. Nothing is truncated.</p>
+          <div class="table">
+            <table>
+              <tbody>
+                {limits.map(([what, value]) => <tr><td set:html={what} /><td>{value}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Diagnostics</h3>
+          <p>
+            <code>seqc</code> reports every error it can find in one run, each with its line and column, and all of them
+            before any model access. The codes are stable.
+          </p>
+          <CodeBlock code={diagnostic} lang="console" />
+          <a class="btn btn-ink" href={href('#try')}>
+            Try it in the playground
+            <Icon name="arrow-up-right" />
+          </a>
+        </section>
+
+        <section id="commands">
+          <p class="eyebrow">04</p>
+          <h2 class="display h-2">Commands</h2>
+          <div class="table">
+            <table>
+              <thead>
+                <tr><th>Command</th><th>What it does</th></tr>
+              </thead>
+              <tbody>
+                {commands.map(([command, does]) => <tr><td><code set:html={command} /></td><td set:html={does} /></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Options for <code>seqc &lt;file.seq&gt;</code>: <code>--build-only</code>, <code>--rebuild</code>,
+            <code>--force</code>, <code>--quiet</code>. Every command accepts <code>--set section.key=value</code>.
+          </p>
+        </section>
+
+        <section id="failures">
+          <p class="eyebrow">05</p>
+          <h2 class="display h-2">When something fails</h2>
+          <p class="lede muted">
+            The exit status says which stage stopped. A failed build never replaces the last accepted build and never runs
+            a stale executable.
+          </p>
+          <div class="table">
+            <table class="wide">
+              <thead>
+                <tr><th>Exit</th><th>Meaning</th><th>What to do</th></tr>
+              </thead>
+              <tbody>
+                {
+                  failures.map(([status, meaning, action]) => (
+                    <tr>
+                      <td class="status">{status}</td>
+                      <td>{meaning}</td>
+                      <td set:html={action} />
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="reference">
+          <p class="eyebrow">06</p>
+          <h2 class="display h-2">Reference</h2>
+          <ul class="cards">
+            {
+              reference.map((doc) => (
+                <li>
+                  <a href={doc.url}>
+                    <strong class="display h-3">{doc.title}</strong>
+                    <span>{doc.text}</span>
+                    <Icon name="arrow-up-right" />
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .layout {
+    display: grid;
+    gap: 40px;
+    padding-block: clamp(48px, 7vw, 96px) clamp(72px, 10vw, 136px);
+  }
+
+  .toc {
+    display: none;
+  }
+  .toc p {
+    margin-bottom: 16px;
+    color: var(--ink-55);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .toc ol {
+    display: grid;
+    border-left: 1px solid var(--line);
+  }
+  .toc a {
+    display: flex;
+    gap: 12px;
+    margin-left: -1px;
+    padding: 8px 0 8px 18px;
+    border-left: 2px solid transparent;
+    color: var(--ink-70);
+    font-size: 14.5px;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+  }
+  .toc a span {
+    color: var(--ink-55);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+  }
+  .toc a:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  .content {
+    display: grid;
+    gap: clamp(64px, 8vw, 104px);
+    min-width: 0;
+    max-width: 50rem;
+  }
+  .content section {
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+    min-width: 0;
+    scroll-margin-top: 32px;
+  }
+  .content section > :global(*) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .content section > :global(.command),
+  .content section > :global(.block),
+  .content section > .table,
+  .content section > .cards {
+    width: 100%;
+  }
+  .content h3 {
+    margin-top: 18px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .content p:not(.eyebrow, .lede) {
+    color: var(--ink-70);
+  }
+  .content p a {
+    color: var(--blue);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .eyebrow {
+    margin-bottom: -8px;
+    color: var(--blue);
+  }
+
+  .points {
+    display: grid;
+    gap: 12px;
+  }
+  .points li {
+    position: relative;
+    padding-left: 26px;
+    color: var(--ink-70);
+  }
+  .points li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.42em;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+
+  .table {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  /* Three columns need room; on a phone the table scrolls sideways. */
+  .wide {
+    min-width: 38rem;
+  }
+  th,
+  td {
+    padding: 14px 18px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--ink);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  tr + tr td {
+    border-top: 1px solid var(--line);
+  }
+  td {
+    color: var(--ink-70);
+  }
+  td:first-child {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  td:first-child :global(code) {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .status {
+    font-family: var(--mono);
+  }
+
+  .cards {
+    display: grid;
+    gap: 16px;
+  }
+  .cards a {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    height: 100%;
+    padding: 24px 56px 24px 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink-70);
+    transition:
+      border-color 0.2s,
+      transform 0.2s;
+  }
+  .cards strong {
+    color: var(--ink);
+  }
+  .cards :global(svg) {
+    position: absolute;
+    right: 20px;
+    top: 22px;
+    width: 22px;
+    height: 22px;
+    color: var(--blue);
+  }
+  .cards a:hover {
+    border-color: var(--blue);
+    transform: translateY(-3px);
+  }
+
+  @media (min-width: 640px) {
+    .cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .layout {
+      grid-template-columns: 15rem minmax(0, 1fr);
+      gap: clamp(48px, 6vw, 96px);
+    }
+    .toc {
+      position: sticky;
+      top: 40px;
+      display: block;
+      align-self: start;
+    }
+  }
+</style>

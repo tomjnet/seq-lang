@@ -1,0 +1,32 @@
+FILE:1:7: error[E0311]: model must be a Hugging Face repository URL
+    model("https://example.com/not/huggingface")
+          ^
+    hint: use https://huggingface.co/<owner>/<repo>, optionally followed by /tree/<revision>
+FILE:2:9: error[E0203]: backend is selected with a call, not an assignment
+    backend = "c"
+            ^
+    hint: write backend.C()
+FILE:3:8: error[E0312]: invalid name: the name contains a character other than letters, digits, underscores, and hyphens
+    name = "bad name"
+           ^
+    hint: use letters, digits, underscores, and hyphens, starting with a letter or underscore
+FILE:5:6: error[E0208]: 'ask' is a reserved word and cannot be a step name
+    step ask():
+         ^
+    hint: reserved words are model, backend, name, step, and ask
+FILE:9:3: error[E0108]: inconsistent indentation: expected 0 or 4 spaces, found 2
+      ask("two spaces")
+      ^
+    hint: top-level declarations are not indented; ask() statements are indented exactly four spaces
+FILE:11:6: error[E0315]: duplicate step name 'twice'
+    step twice():
+         ^
+    hint: first declared on line 8
+FILE:12:9: error[E0204]: ask requires parentheses
+        ask "no parentheses"
+            ^
+    hint: write ask("...")
+FILE:13:9: error[E0316]: ask() prompt must not be empty
+        ask("")
+            ^
+seqc: 8 error(s) in FILE

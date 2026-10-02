@@ -1,0 +1,373 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import Icon from '../components/Icon.astro';
+import { HERO_SOURCE } from '../data/examples';
+import { DOCS, href } from '../site';
+
+const compileTime = [
+  'The model writes a plan for the whole workflow, then one C function per step, then test cases.',
+  'Every response is constrained by a JSON schema, sampled at temperature 0 with a fixed seed.',
+  'Inference is local: llama.cpp on a loopback port. Nothing from a project leaves the machine.',
+  'Compile and link errors go back to the model for repair, at most twice.',
+];
+const runTime = [
+  'What runs is a static executable, compiled by GCC with <code>-O3</code>.',
+  'It never contacts a model, and could not: generated programs have no network.',
+  'An unchanged workflow reuses the accepted build: no inference, no compilation.',
+  'A failed build never replaces the last accepted build and never runs a stale executable.',
+];
+
+const sandbox = [
+  { what: 'Network', rule: 'None. TCP, UDP, and Unix sockets are all denied.' },
+  { what: 'New processes', rule: 'None. A generated program cannot start another program.' },
+  { what: 'Reading', rule: 'Its own executable and the project’s <code>input/</code> directory. Nothing else on the host.' },
+  { what: 'Writing', rule: 'The staging directory of its run: regular files and directories only.' },
+  { what: 'Resources', rule: 'CPU time, wall-clock time, address space, file size, and output size are all limited.' },
+];
+
+const tree = `top3Company/
+├── seq.lock                 pinned model
+├── src/main.seq             the workflow
+├── input/                   read-only data for the workflow
+└── output/
+    ├── company.txt          published results
+    ├── top3Company.png
+    └── temp/                compiler-owned
+        ├── top3Company.c    generated program
+        ├── top3Company.s    its optimized assembly
+        ├── top3Company.bin  executable linked from that assembly
+        ├── test/            generated Google Test file and binary
+        ├── build.json       manifest of the accepted build
+        └── runs/<run-id>/   plan, attempts, logs, and manifests of each run`;
+
+const limits = [
+  {
+    title: 'A request is not a specification',
+    text: 'Parsing and step order are deterministic. The synthesized program is not. A program that compiles is not proof that it does what the request meant.',
+  },
+  {
+    title: 'Generated tests are reported, not enforced',
+    text: 'The model writes the tests as well as the program. Failing cases are shown and recorded; they do not block a run.',
+  },
+  {
+    title: 'Not yet verified with a real model',
+    text: 'The pipeline is covered by a deterministic suite that uses a scripted model. Pass rates with real model weights have not been measured yet.',
+  },
+  {
+    title: 'Version 0.1 is narrow',
+    text: 'Linux x86_64 and the C backend only. The sandbox is proven only on WSL2 so far. There is no remote inference.',
+  },
+];
+---
+
+<Base
+  title="Why Seq"
+  description="Why the Seq programming language puts the model at compile time, treats generated code as untrusted, and keeps every artifact of a build."
+>
+  <PageHeader eyebrow="Why Seq">
+    <Fragment slot="title">Words are the <span class="tail-text">source.</span></Fragment>
+    The Seq programming language puts the language model where a compiler belongs: in the build. You write requests. You
+    run a native program.
+  </PageHeader>
+
+  <section class="section on-paper">
+    <div class="wrap split">
+      <div class="text" data-reveal>
+        <p class="eyebrow">01 · The language</p>
+        <h2 class="display h-2">The request is the source</h2>
+        <p class="lede muted">
+          A Seq file declares which model writes the program, which language the program is written in, a name, and an
+          ordered list of steps. Each step holds requests in plain language.
+        </p>
+        <ul class="points">
+          <li>Steps run in source order. That order is fixed by the compiler, not left to the model.</li>
+          <li>
+            The model receives the whole workflow at once, so a later step can use what an earlier step creates.
+          </li>
+          <li>
+            Seq has no expressions, branches, loops, imports, or parallel steps. The generated program may use them
+            internally.
+          </li>
+        </ul>
+        <a class="btn btn-ink" href={href('learn/#tour')}>
+          Tour the language
+          <Icon name="arrow-up-right" />
+        </a>
+      </div>
+      <div data-reveal style="--i:1">
+        <CodeBlock code={HERO_SOURCE} lang="seq" title="src/main.seq" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section on-ink dark">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">02 · The model</p>
+        <h2 class="display h-2">A model at compile time.<br /><span class="tail-text">Native code at run time.</span></h2>
+        <p class="lede muted">
+          <code>ask()</code> is a compile-time directive. Once a build is accepted, the model's part is over.
+        </p>
+      </div>
+      <div class="versus">
+        <div class="panel" data-reveal>
+          <h3 class="display h-3">At compile time</h3>
+          <ul class="points on-dark">
+            {compileTime.map((item) => <li set:html={item} />)}
+          </ul>
+        </div>
+        <div class="panel panel-bright" data-reveal style="--i:1">
+          <h3 class="display h-3">At run time</h3>
+          <ul class="points on-dark">
+            {runTime.map((item) => <li set:html={item} />)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section on-white">
+    <div class="wrap split">
+      <div class="text" data-reveal>
+        <p class="eyebrow">03 · The sandbox</p>
+        <h2 class="display h-2">Generated code is untrusted</h2>
+        <p class="lede muted">
+          <code>seqc</code> treats the model's responses, the code built from them, and the contents of
+          <code>input/</code> as untrusted. Prompting does not enforce anything. The kernel does.
+        </p>
+        <ul class="points">
+          <li>
+            Compilers and generated programs run under Landlock and a seccomp filter, with no privileges needed.
+          </li>
+          <li>If the sandbox cannot be applied, nothing runs. There is no fallback to unrestricted execution.</li>
+          <li>
+            <code>seqc</code> never installs what a model asks for. A plan that needs anything beyond the C library,
+            <code>libm</code>, and the Seq runtime fails the build.
+          </li>
+        </ul>
+        <a class="btn btn-line" href={`${DOCS}/security.md`}>
+          Read the security notes
+          <Icon name="arrow-up-right" />
+        </a>
+      </div>
+      <dl class="rules" data-reveal style="--i:1">
+        {
+          sandbox.map((row) => (
+            <div>
+              <dt>{row.what}</dt>
+              <dd set:html={row.rule} />
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <section class="section on-paper">
+    <div class="wrap split">
+      <div class="text" data-reveal>
+        <p class="eyebrow">04 · The record</p>
+        <h2 class="display h-2">Every build explains itself</h2>
+        <p class="lede muted">
+          An accepted build keeps the generated C, its assembly, the executable, and the tests beside your outputs. You
+          can read exactly what will run.
+        </p>
+        <ul class="points">
+          <li>
+            The executable is linked from the emitted assembly, so the <code>.c</code>, <code>.s</code>, and
+            <code>.bin</code> files correspond by construction.
+          </li>
+          <li>
+            Each run records its plan, every inference request and response, compiler logs, and the hashes of what it
+            published.
+          </li>
+          <li>
+            Publishing never replaces a file <code>seqc</code> did not create, unless you pass <code>--force</code>.
+          </li>
+        </ul>
+        <a class="btn btn-line" href={`${DOCS}/architecture.md`}>
+          Read the architecture
+          <Icon name="arrow-up-right" />
+        </a>
+      </div>
+      <div data-reveal style="--i:1">
+        <CodeBlock code={tree} title="A project after one run" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section on-ink dark">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">05 · The limits</p>
+        <h2 class="display h-2">What Seq does not promise</h2>
+        <p class="lede muted">A language built on a model should say plainly where it stops.</p>
+      </div>
+      <ul class="limits">
+        {
+          limits.map((limit, i) => (
+            <li data-reveal style={`--i:${i}`}>
+              <h3>{limit.title}</h3>
+              <p class="muted">{limit.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="next" data-reveal>
+        <a class="btn" href={href('#try')}>
+          Try Seq
+          <Icon name="arrow-up-right" />
+        </a>
+        <a class="btn btn-ghost" href={href('learn/')}>Learn Seq</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .split {
+    display: grid;
+    gap: clamp(40px, 5vw, 80px);
+    align-items: center;
+  }
+  .split > * {
+    min-width: 0;
+  }
+  .text {
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+
+  .points {
+    display: grid;
+    gap: 14px;
+  }
+  .points li {
+    position: relative;
+    padding-left: 26px;
+    color: var(--ink-70);
+  }
+  .points.on-dark li {
+    color: rgba(255, 255, 255, 0.74);
+  }
+  .points li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.42em;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+
+  .dark {
+    background:
+      radial-gradient(46% 40% at 96% 0%, rgba(14, 109, 255, 0.4), transparent 70%),
+      radial-gradient(36% 34% at 0% 100%, rgba(106, 61, 240, 0.28), transparent 70%), var(--ink);
+  }
+
+  .versus {
+    display: grid;
+    gap: 16px;
+  }
+  .panel {
+    display: grid;
+    gap: 24px;
+    align-content: start;
+    padding: clamp(26px, 3.4vw, 44px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .panel-bright {
+    border-color: transparent;
+    background: linear-gradient(135deg, #0a3fd0, var(--blue));
+  }
+  .panel-bright .points li {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .panel-bright .points li::before {
+    background: #fff;
+  }
+  .panel-bright :global(code) {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+
+  .rules {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .rules div {
+    display: grid;
+    gap: 4px 24px;
+    padding: 20px 24px;
+  }
+  .rules div + div {
+    border-top: 1px solid var(--line);
+  }
+  .rules div:nth-child(odd) {
+    background: var(--paper);
+  }
+  .rules dt {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .rules dd {
+    color: var(--ink-70);
+  }
+
+  .limits {
+    display: grid;
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .limits li {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    padding: clamp(24px, 3vw, 36px);
+    background: var(--ink);
+  }
+  .limits h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .next {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: clamp(36px, 5vw, 56px);
+  }
+
+  @media (min-width: 640px) {
+    .rules div {
+      grid-template-columns: 9.5rem 1fr;
+      align-items: baseline;
+    }
+    .limits {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 900px) {
+    .split {
+      grid-template-columns: 1fr 1fr;
+    }
+    .versus {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

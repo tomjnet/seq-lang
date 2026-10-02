@@ -1,0 +1,65 @@
+---
+// A code or console window: a title bar with three dots, then the content.
+interface Props {
+  title: string;
+  class?: string;
+}
+const { title, class: className } = Astro.props;
+---
+
+<div class:list={['window', className]}>
+  <div class="bar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="title">{title}</span>
+    <slot name="bar" />
+  </div>
+  <slot />
+</div>
+
+<style>
+  .window {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: rgba(3, 11, 38, 0.92);
+    box-shadow:
+      0 50px 100px -30px rgba(1, 5, 20, 0.75),
+      0 0 0 1px rgba(71, 240, 253, 0.06);
+    color: #dce6ff;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 42px;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .dots i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .dots i:first-child {
+    background: var(--cyan);
+  }
+  .dots i:nth-child(2) {
+    background: var(--sky);
+  }
+  .dots i:last-child {
+    background: var(--blue);
+  }
+  .title {
+    margin-right: auto;
+    color: rgba(255, 255, 255, 0.55);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+</style>

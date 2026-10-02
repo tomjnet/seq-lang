@@ -1,0 +1,66 @@
+---
+// The band at the top of an inner page: the hero's backdrop, at reading height.
+interface Props {
+  eyebrow: string;
+}
+const { eyebrow } = Astro.props;
+---
+
+<header class="page-header">
+  <span class="beam b1" aria-hidden="true"></span>
+  <span class="beam b2" aria-hidden="true"></span>
+  <div class="wrap">
+    <p class="eyebrow fade-up">{eyebrow}</p>
+    <h1 class="display h-hero fade-up" style="--i:1"><slot name="title" /></h1>
+    <p class="lede fade-up" style="--i:2"><slot /></p>
+  </div>
+</header>
+
+<style>
+  .page-header {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(132px, 20vh, 200px) clamp(56px, 9vh, 96px);
+    background:
+      radial-gradient(48% 80% at 90% 0%, rgba(71, 240, 253, 0.5), transparent 62%),
+      radial-gradient(40% 70% at 104% 100%, rgba(106, 61, 240, 0.65), transparent 66%),
+      linear-gradient(112deg, var(--ink) 0%, #06164f 34%, #0a3fd0 70%, var(--blue) 100%);
+    color: #fff;
+  }
+  .wrap {
+    position: relative;
+  }
+  .eyebrow {
+    margin-bottom: 22px;
+    color: rgba(255, 255, 255, 0.78);
+  }
+  h1 {
+    max-width: 16ch;
+    font-size: clamp(3rem, 8vw, 6.6rem);
+  }
+  .lede {
+    max-width: 40rem;
+    margin-top: 28px;
+    color: rgba(255, 255, 255, 0.76);
+  }
+
+  .beam {
+    position: absolute;
+    width: clamp(70px, 9vw, 150px);
+    border-radius: clamp(8px, 1vw, 16px);
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+  .b1 {
+    left: 62%;
+    top: 10%;
+    height: 60%;
+    opacity: 0.2;
+  }
+  .b2 {
+    left: 84%;
+    top: 34%;
+    height: 70%;
+    opacity: 0.28;
+  }
+</style>

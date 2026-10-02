@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "index": 1,
+      "name": "step1",
+      "summary": "Writes company.txt with five lines of the form company,quantity,price.",
+      "reads": [],
+      "writes": ["company.txt"]
+    },
+    {
+      "index": 2,
+      "name": "step2",
+      "summary": "Reads company.txt, sums quantity times price per company, and prints one line per company.",
+      "reads": ["company.txt"],
+      "writes": []
+    },
+    {
+      "index": 3,
+      "name": "step3",
+      "summary": "Draws the three companies with the highest sales total as a bar chart in top3.png.",
+      "reads": [],
+      "writes": ["top3.png"]
+    }
+  ],
+  "outputs": [
+    {"path": "company.txt", "kind": "text", "final": false},
+    {"path": "top3.png", "kind": "png", "final": true}
+  ],
+  "dependencies": ["libc", "libm", "seqrt"]
+}

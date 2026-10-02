@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "index": 1,
+      "name": "make_numbers",
+      "summary": "Writes numbers.txt: the integers 1 to 5 in decimal, one per line.",
+      "reads": [],
+      "writes": ["numbers.txt"]
+    },
+    {
+      "index": 2,
+      "name": "add_numbers",
+      "summary": "Reads numbers.txt, writes the sum as one decimal line to total.txt, and prints \"sum=<value>\".",
+      "reads": ["numbers.txt"],
+      "writes": ["total.txt"]
+    }
+  ],
+  "outputs": [
+    {"path": "numbers.txt", "kind": "text", "final": false},
+    {"path": "total.txt", "kind": "text", "final": true}
+  ],
+  "dependencies": ["libc", "seqrt"]
+}

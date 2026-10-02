@@ -1,0 +1,31 @@
+---
+// The Seq wordmark, traced from logo/logo-seq.png. The letters take the
+// current text colour; the q's tail keeps its gradient.
+import logo from '../data/logo.json';
+
+interface Props {
+  // Gradient ids must be unique in a page that shows the logo twice.
+  id?: string;
+  class?: string;
+}
+const { id = 'logo', class: className } = Astro.props;
+---
+
+<svg
+  class={className}
+  viewBox={`-4 -4 ${logo.width + 8} ${logo.height + 8}`}
+  role="img"
+  aria-label="Seq"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <linearGradient id={`${id}-tail`} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#47F0FD"></stop>
+      <stop offset=".5" stop-color="#2DB9FE"></stop>
+      <stop offset="1" stop-color="#0E6DFF"></stop>
+    </linearGradient>
+  </defs>
+  <path d={logo.tail} fill={`url(#${id}-tail)`} stroke={`url(#${id}-tail)`} stroke-width="3" stroke-linejoin="round"
+  ></path>
+  <path d={logo.letters} fill="currentColor" fill-rule="evenodd"></path>
+</svg>

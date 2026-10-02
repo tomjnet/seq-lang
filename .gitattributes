@@ -1,0 +1,4 @@
+# Store text with LF line endings; the target platform is Linux.
+* text=auto eol=lf
+
+*.png binary

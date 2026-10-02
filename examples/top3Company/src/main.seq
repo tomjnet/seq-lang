@@ -1,0 +1,21 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "top3Company"
+
+# The prompts fix the file format and the data, so that the result can be
+# checked against values worked out by hand (see ../README.md).
+#
+# "Sales total" here means the sum of quantity times price over a company's
+# transactions. That is transaction value, not accounting revenue.
+
+step step1():
+    ask("create a database file company.txt with exactly these 5 stock transactions, one per line in the format company,quantity,price")
+    ask("the lines are: ACME,10,25.50 then Globex,4,120.00 then Initech,30,9.75 then ACME,5,26.00 then Umbrella,2,40.00")
+
+step step2():
+    ask("read company.txt and for each company compute its sales total, the sum of quantity times price over its transactions")
+    ask("print one line per company in the order they first appear, as: company total with two decimals")
+
+step step3():
+    ask("create an image chart top3Company.png showing the 3 companies with the highest sales total, highest first")
+    ask("if two companies have the same total, the one that appears first in company.txt comes first")

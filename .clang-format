@@ -1,0 +1,4 @@
+# Formatting for the C++ compiler sources and the C runtime.
+# See docs/Google_Cpp_Style_Guide_20260925.md and
+# docs/Google_C_Style_Guide_20260930.md.
+BasedOnStyle: Google

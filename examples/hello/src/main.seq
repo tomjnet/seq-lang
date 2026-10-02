@@ -1,0 +1,6 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "hello"
+
+step step1():
+    ask("print Hello from Seq")

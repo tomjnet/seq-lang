@@ -1,0 +1,255 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { NAV, REPO, href } from '../site';
+
+const here = Astro.url.pathname.replace(/\/$/, '');
+const isCurrent = (path: string) => !path.includes('#') && here === href(path).replace(/\/$/, '');
+---
+
+<header class="nav">
+  <a class="brand" href={href()} aria-label="Seq home">
+    <Logo id="nav-logo" class="brand-mark" />
+  </a>
+
+  <nav class="links" aria-label="Main">
+    {
+      NAV.map((item) => (
+        <a href={href(item.path)} aria-current={isCurrent(item.path) ? 'page' : undefined}>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <a class="btn btn-ghost btn-sm github" href={REPO}>
+    <Icon name="github" />
+    GitHub
+    <Icon name="arrow-up-right" />
+  </a>
+
+  <button class="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu" data-menu-open>
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<div class="menu" id="menu" data-menu>
+  <div class="menu-head">
+    <a class="brand" href={href()} aria-label="Seq home">
+      <Logo id="menu-logo" class="brand-mark" />
+    </a>
+    <button class="menu-close" type="button" aria-label="Close menu" data-menu-close>
+      <Icon name="close" />
+    </button>
+  </div>
+  <nav class="menu-links" aria-label="Menu">
+    {
+      NAV.map((item, i) => (
+        <a class="display" href={href(item.path)} style={`--i:${i}`} data-menu-close>
+          {item.label}
+        </a>
+      ))
+    }
+    <a class="btn btn-ghost" href={REPO} style={`--i:${NAV.length}`}>
+      <Icon name="github" />
+      GitHub
+      <Icon name="arrow-up-right" />
+    </a>
+  </nav>
+</div>
+
+<script>
+  const menu = document.querySelector<HTMLElement>('[data-menu]');
+  const opener = document.querySelector<HTMLElement>('[data-menu-open]');
+
+  function setOpen(open: boolean) {
+    if (!menu || !opener) return;
+    menu.classList.toggle('is-open', open);
+    opener.setAttribute('aria-expanded', String(open));
+    document.documentElement.classList.toggle('menu-open', open);
+    if (open) menu.querySelector<HTMLElement>('[data-menu-close]')?.focus();
+    else opener.focus({ preventScroll: true });
+  }
+
+  opener?.addEventListener('click', () => setOpen(true));
+  menu?.querySelectorAll('[data-menu-close]').forEach((el) => el.addEventListener('click', () => setOpen(false)));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && menu?.classList.contains('is-open')) setOpen(false);
+  });
+</script>
+
+<style>
+  .nav {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: clamp(20px, 2.4vw, 28px) var(--gutter);
+    color: #fff;
+  }
+
+  .brand {
+    display: inline-flex;
+    color: #fff;
+  }
+  .brand :global(.brand-mark) {
+    width: auto;
+    height: clamp(30px, 3vw, 38px);
+  }
+
+  .links {
+    display: none;
+    gap: clamp(24px, 3.4vw, 48px);
+  }
+  .links a {
+    position: relative;
+    padding-block: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .links a::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 2px;
+    background: var(--tail);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease-out;
+  }
+  .links a:hover,
+  .links a[aria-current] {
+    color: #fff;
+  }
+  .links a:hover::after,
+  .links a[aria-current]::after {
+    transform: scaleX(1);
+  }
+
+  .github {
+    display: none;
+  }
+  .github :global(svg:first-child) {
+    transform: none;
+  }
+
+  .burger {
+    display: grid;
+    gap: 6px;
+    justify-items: end;
+    padding: 10px 0 10px 10px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .burger span {
+    width: 24px;
+    height: 2px;
+    background: #fff;
+  }
+  .burger span:last-child {
+    width: 16px;
+  }
+
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    background: rgba(3, 11, 38, 0.96);
+    color: #fff;
+    /* Hidden from pointers, focus and assistive technology until opened. */
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 0.4s,
+      visibility 0s 0.4s;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .menu.is-open {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.4s;
+  }
+  .menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px var(--gutter);
+  }
+  .menu-close {
+    padding: 8px;
+    border: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+  }
+  .menu-close :global(svg) {
+    width: 28px;
+    height: 28px;
+  }
+  .menu-links {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 18px;
+    padding: 0 var(--gutter) 15vh;
+  }
+  .menu-links > * {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity 0.5s ease-out,
+      transform 0.5s ease-out,
+      color 0.2s;
+    transition-delay: calc(var(--i) * 80ms + 100ms), calc(var(--i) * 80ms + 100ms), 0s;
+  }
+  .menu.is-open .menu-links > * {
+    opacity: 1;
+    transform: none;
+  }
+  .menu-links .display {
+    font-size: clamp(2.6rem, 12vw, 3.6rem);
+  }
+  .menu-links .display:hover {
+    color: var(--cyan);
+  }
+  .menu-links .btn {
+    margin-top: 20px;
+  }
+
+  :global(html.menu-open) {
+    overflow: hidden;
+  }
+
+  @media (min-width: 900px) {
+    .links {
+      display: flex;
+    }
+    .github {
+      display: inline-flex;
+    }
+    .burger {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu,
+    .menu.is-open,
+    .menu-links > * {
+      transition: none;
+    }
+  }
+</style>

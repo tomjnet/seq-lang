@@ -1,0 +1,11 @@
+model("https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct")
+backend.C()
+name = "@NAME@"
+
+# A two-step data dependency: the second step reads what the first one wrote.
+step make_numbers():
+    ask("create numbers.txt holding the integers 1 to 5, one per line")
+
+step add_numbers():
+    ask("read numbers.txt and write their sum to total.txt")
+    ask("also print the sum")

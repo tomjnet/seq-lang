@@ -1,0 +1,62 @@
+---
+// A band of display type that scrolls sideways. The track holds the words
+// twice and moves by half its width, so the loop has no seam.
+interface Props {
+  words: string[];
+}
+const { words } = Astro.props;
+---
+
+<div class="ticker" aria-hidden="true">
+  <ul class="track display">
+    {[0, 1].map(() => words.map((word, i) => <li class={i % 2 ? 'outline' : undefined}>{word}</li>))}
+  </ul>
+</div>
+
+<style>
+  .ticker {
+    overflow: hidden;
+    padding-block: clamp(18px, 2.4vw, 30px);
+    border-block: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--ink);
+    color: #fff;
+  }
+  .track {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    font-size: clamp(2rem, 5vw, 4rem);
+    animation: slide 36s linear infinite;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  /* The q's tail between the words. */
+  li::after {
+    content: '';
+    width: 0.2em;
+    height: 0.42em;
+    margin-inline: 0.55em;
+    border-radius: 0.05em;
+    background: var(--tail);
+    transform: skewY(40deg);
+  }
+  .outline {
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.7);
+  }
+
+  @keyframes slide {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track {
+      animation: none;
+    }
+  }
+</style>

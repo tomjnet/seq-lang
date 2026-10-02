@@ -1,0 +1,13 @@
+model("https://example.com/not/huggingface")
+backend = "c"
+name = "bad name"
+
+step ask():
+    ask("reserved step name")
+
+step twice():
+  ask("two spaces")
+
+step twice():
+    ask "no parentheses"
+    ask("")

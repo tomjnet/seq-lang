@@ -201,6 +201,7 @@ A failed build never replaces the last accepted build and never runs a stale exe
 - [docs/security.md](docs/security.md): the sandbox, what it denies, where it was tested, known limits.
 - [docs/decisions.md](docs/decisions.md): decisions made at the plan's gates and open items.
 - [docs/legacy.md](docs/legacy.md): how seq-lang and `seqc` differ from seq-lang-legacy and `seqc_legacy`.
+- SeqAtom Model: In-progress: https://huggingface.co/tomjnet/SeqAtom-Coder-1.5B-Instruct
 
 ## License
 
